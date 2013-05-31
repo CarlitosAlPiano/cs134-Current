@@ -1,0 +1,28 @@
+<geometry>
+    <general>
+    </general>
+    <walls r="0.0" g="0.8" b="1.0" a="1.0" w="0.2">
+        <vertex x="10" z="0" />
+        <vertex x="10" z="10" />
+        <vertex x="12" z="15" />
+        <vertex x="12" z="35" />
+        <vertex x="7" z="45" />
+        <vertex x="7" z="60" />
+        <vertex x="12" z="70" />
+        <vertex x="-12" z="70" tt="1" />
+        <vertex x="-7" z="60" />
+        <vertex x="-7" z="45" />
+        <vertex x="-12" z="35" />
+        <vertex x="-12" z="15" />
+        <vertex x="-10" z="10" />
+        <vertex x="-10" z="0" />
+    </walls>
+    <obstacles>
+        <obstacle type="BOX" w="6" h="5" d="3" x="7" y="2.5" z="3" r="1.0" g="0.5" b="0.2" a="1.0" bord="3" />
+        <obstacle type="CYLINDER" rad="3" h="5" x="-5" y="2.5" z="15" bord="2" />
+        <obstacle type="CYLINDER" rad="5" h="10" x="5" y="5" z="25" bord="2" />
+    </obstacles>
+    <coins>
+        <coin x="5" y="5" z="5" />
+    </coins>
+</geometry>
