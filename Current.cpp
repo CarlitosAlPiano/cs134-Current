@@ -224,3 +224,11 @@ bool Current::Update() {
 	
     return core->updateAndRender();
 }
+
+Enemy::Enemy(ScenePrimitive *enemy, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : enemy(enemy), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()), middlePos(enemy->getPosition()) {}
+
+Enemy::Enemy(ScenePrimitive *enemy, Vector3 middlePos, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : enemy(enemy), middlePos(middlePos), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()) {}
+
+void Enemy::update(Number totalElapsed){
+    enemy->setPosition(middlePos + movementDir*amplitude*sin(velocity*totalElapsed + offset));
+}
