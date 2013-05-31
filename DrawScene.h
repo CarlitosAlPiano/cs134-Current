@@ -19,7 +19,7 @@ class DrawScene {
 private:
     static deque<ScenePrimitive*> *walls;
     static deque<ScenePrimitive*> *obstacles;
-    static ScenePrimitive *player, *playerBB;
+    static ScenePrimitive *player;
 
     static bool fileExists(const char *strFile);
     static void getColor(Color& color, xml_node<> *node);
@@ -39,7 +39,7 @@ private:
     static void drawPlayer(CollisionScene *scene, xml_node<> *node);
 public:
     static Number wallHeight;
-    static void drawScene(CollisionScene *scene, ScenePrimitive*& plyr, ScenePrimitive*& plyrBB, deque<ScenePrimitive*> *wlls, deque<ScenePrimitive*> *obstcls, const char *strFile);
+    static void drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<ScenePrimitive*> *wlls, deque<ScenePrimitive*> *obstcls, const char *strFile);
 };
 
 #endif

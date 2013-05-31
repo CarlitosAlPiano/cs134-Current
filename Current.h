@@ -5,16 +5,18 @@
 
 using namespace Polycode;
 
-class HelloPolycodeApp : public EventHandler {
+class Current : public EventHandler {
 public:
-    HelloPolycodeApp(PolycodeView *view);
-    ~HelloPolycodeApp();
+    Current(PolycodeView *view);
+    ~Current();
     void handleEvent(Event *e);
     bool Update();
     
 private:
     Core *core;
     
+    Number alpha, beta;
+    bool mouse_clicked;
     bool left_pressed, right_pressed;
     bool further_pressed, closer_pressed;
     bool up_pressed, down_pressed;
@@ -22,9 +24,9 @@ private:
     CollisionScene *scene;
     deque<ScenePrimitive*> walls;
     deque<ScenePrimitive*> obstacles;
-    ScenePrimitive *player, *playerBB;
-    Vector3 playerVeloc, centerPlayerBB;
-    Number playerRad;
+    ScenePrimitive *player;
+    Vector3 playerVeloc;
+    Number playerRad, currentZ;
     Number totalElapsed;
     
     void recomputePlayerVeloc();

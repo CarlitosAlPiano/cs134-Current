@@ -19,7 +19,7 @@
 
 deque<ScenePrimitive*>* DrawScene::walls;
 deque<ScenePrimitive*>* DrawScene::obstacles;
-ScenePrimitive* DrawScene::player = NULL, * DrawScene::playerBB = NULL;
+ScenePrimitive* DrawScene::player = NULL;
 Number DrawScene::wallHeight = DEF_WALL_HEIGHT;
 
 bool DrawScene::fileExists(const char *strFile){
@@ -279,6 +279,7 @@ void DrawScene::drawObstacles(CollisionScene *scene, xml_node<> *node){
             getPosition(pos, node);                             // And position
             scnPrimitive->setColor(obstacleCol);                // Apply those settings
             scnPrimitive->setPosition(pos);
+            scnPrimitive->backfaceCulled = false;
             obstacles->push_back(scnPrimitive);                 // Store pointer in the queue obstacles
             scene->addCollisionChild(obstacles->back(), shape); // And add the obstacle to the scene
             drawObstBorder(scene, shape, pos, node);            // Draw the obstacle's border
@@ -304,14 +305,9 @@ void DrawScene::drawPlayer(CollisionScene *scene, xml_node<> *node){
     player->setColor(playerCol);                // Apply those settings
     player->setPosition(pos);
     scene->addCollisionChild(player, shape);    // Add the player to the scene
-    
-    playerBB = new ScenePrimitive(ScenePrimitive::TYPE_BOX, DEF_BB_WIDTH, DEF_WALL_HEIGHT, DEF_BB_DEPTH);
-    playerBB->setColor(1, 1, 1, 0);
-    playerBB->setPosition(pos);
-    playerBB->visible = false;
 }
 
-void DrawScene::drawScene(CollisionScene *scene, ScenePrimitive*& plyr, ScenePrimitive*& plyrBB, deque<ScenePrimitive*> *wlls, deque<ScenePrimitive*> *obstcls, const char *strFile){
+void DrawScene::drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<ScenePrimitive*> *wlls, deque<ScenePrimitive*> *obstcls, const char *strFile){
     if(!fileExists(strFile)) ERROR("Error: File not found (" << strFile << ")");    // Make sure the file exists
     file<> file(strFile);                                       // Open the xml file
     xml_document<> doc;
@@ -344,5 +340,4 @@ void DrawScene::drawScene(CollisionScene *scene, ScenePrimitive*& plyr, ScenePri
     drawPlayer(scene, node);                                    // Read and draw the player
     
     plyr = player;
-    plyrBB = playerBB;
 }
