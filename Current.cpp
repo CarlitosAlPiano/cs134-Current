@@ -3,35 +3,29 @@
 #define VEL_CAM_Z       0.1
 #define VEL_PLAYER_INC  0.15
 #define VEL_MAX         0.25
-#define VEL_ROT_AWARD   50
-#define BB_HALF_DEPTH   5
+#define BB_HALF_DEPTH   8
 #define BB_FRTH_LIMIT   currentZ + BB_HALF_DEPTH
 #define BB_CLSR_LIMIT   currentZ - BB_HALF_DEPTH
 #define BB_TOP_LIMIT    DrawScene::wallHeight - playerRad
 #define BB_BTM_LIMIT    playerRad
+#define TIME_BTWN_COLL  0.5
 
 Current::Current(PolycodeView *view) {
 	core = new POLYCODE_CORE(view, 640,480,false,false,0,0,90);
 	CoreServices::getInstance()->getResourceManager()->addDirResource("default", false);
     
 	scene = new CollisionScene();
-    DrawScene::drawScene(scene, player, &walls, &obstacles, "geometry.xml");
-    scene->getDefaultCamera()->setPosition(-20, 50, -30);
+    DrawScene::drawScene(scene, player, walls, obstacles, enemies, coins, "geometry.xml");
+    scene->getDefaultCamera()->setPosition(0, 25, -30);
 	scene->getDefaultCamera()->lookAt(Vector3(0,1,5));
     
-    ScenePrimitive *t = new ScenePrimitive(ScenePrimitive::TYPE_TORUS, 1, 0.6, 30, 30);
-    t->setColor(1, 0.3, 0.4, 1);
-    t->setPosition(-3, 5, 20);
-    t->setPitch(-90);
-    scene->addCollisionChild(t);
-
     totalElapsed = 0;
+    lastCollision = 0;
     playerRad = player->getMesh()->getRadius();
     playerVeloc = Vector3(0, 0, VEL_CAM_Z);
     currentZ = player->getPosition().z;
 	alpha = 0;
 	beta = PI/2;
-    beta = 0;
 	mouse_clicked = false;
 	left_pressed = false;
 	right_pressed = false;
@@ -44,7 +38,9 @@ Current::Current(PolycodeView *view) {
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEUP);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_KEYDOWN);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_KEYUP);
-    
+    Coin::sndCatch = new Sound("coin.ogg");
+    Sound *s = new Sound("background.ogg");
+    s->Play(true);
 }
 
 Current::~Current() {
@@ -70,7 +66,7 @@ void Current::recomputePlayerVeloc() {
     }else if(further_pressed){
         playerVeloc.z = VEL_CAM_Z + VEL_PLAYER_INC;
     }else{
-        playerVeloc.z = VEL_CAM_Z - VEL_PLAYER_INC;
+        playerVeloc.z = /*VEL_CAM_Z*/ - VEL_PLAYER_INC;
     }
 }
 
@@ -196,8 +192,9 @@ bool Current::Update() {
 	Number elapsed = core->getElapsed();
     totalElapsed += elapsed;
     
-    scene->getEntity(scene->getNumEntities()-1)->setYaw(VEL_ROT_AWARD*totalElapsed);
-
+    //e1->update(totalElapsed);
+    //e2->update(totalElapsed);
+    
     /*Vector3 newCamPos = scene->getDefaultCamera()->getPosition();
     newCamPos.x = -15 * cos(beta) * cos(alpha) + 20;
 	newCamPos.y = -15 * cos(beta) * sin(alpha) + 50;
@@ -208,27 +205,42 @@ bool Current::Update() {
     //scene->getDefaultCamera()->lookAt(Vector3(0, DrawScene::wallHeight/2, currentZ));
     scene->getDefaultCamera()->setPositionZ(scene->getDefaultCamera()->getPosition().z + VEL_CAM_Z);
     keepPlayerWithinBB();
+    for(size_t i=0; i<coins.size(); i++){
+        if(coins.at(i)->coin->visible){
+            coins.at(i)->update(totalElapsed);
+            CollisionResult res = scene->testCollision(player, coins.at(i)->coin);
+            if(res.collided){
+                coins.at(i)->catchCoin();
+                // Increase points!
+            }
+        }
+    }
+    for(size_t i=0; i<enemies.size(); i++){
+        enemies.at(i)->update(totalElapsed);
+        if(checkPlayerCollision(enemies.at(i)->enemy)){
+            if(totalElapsed-lastCollision > TIME_BTWN_COLL){
+                player->color.r -= 0.2;
+                lastCollision = totalElapsed;
+            }
+            //return core->updateAndRender();
+        }
+    }
     for(size_t i=0; i<obstacles.size(); i++){
         if(checkPlayerCollision(obstacles.at(i))){
-            player->color.r -= 0.1;
-            return core->updateAndRender();
+            if(totalElapsed-lastCollision > TIME_BTWN_COLL){
+                player->color.r -= 0.2;
+                lastCollision = totalElapsed;
+            }
+            //return core->updateAndRender();
         }
     }
     for(size_t i=0; i<walls.size(); i++){
         if(checkPlayerCollision(walls.at(i))){
-            return core->updateAndRender();
+            //return core->updateAndRender();
         }
     }
     
 	player->setPosition(player->getPosition() + playerVeloc);
 	
     return core->updateAndRender();
-}
-
-Enemy::Enemy(ScenePrimitive *enemy, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : enemy(enemy), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()), middlePos(enemy->getPosition()) {}
-
-Enemy::Enemy(ScenePrimitive *enemy, Vector3 middlePos, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : enemy(enemy), middlePos(middlePos), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()) {}
-
-void Enemy::update(Number totalElapsed){
-    enemy->setPosition(middlePos + movementDir*amplitude*sin(velocity*totalElapsed + offset));
 }

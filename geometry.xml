@@ -20,9 +20,14 @@
     <obstacles>
         <obstacle type="BOX" w="6" h="5" d="3" x="7" y="2.5" z="3" r="1.0" g="0.5" b="0.2" a="1.0" bord="3" />
         <obstacle type="CYLINDER" rad="3" h="5" x="-5" y="2.5" z="15" bord="2" />
-        <obstacle type="CYLINDER" rad="5" h="10" x="5" y="5" z="25" bord="2" />
+        <obstacle type="CYLINDER" rad="5" h="10" x="7" y="5" z="25" bord="2" />
     </obstacles>
+    <enemies>
+        <enemy type="BOX" w="3" h="10" d="3" x="0" y="5" z="35" amp="10" bord="1" />
+        <enemy type="CYLINDER" rad="3" h="5" x="-1" y="2.5" z="42" amp="7" vel="2" offs="1.8" dirX="1" dirY="0" dirZ="1" bord="1" />
+    </enemies>
     <coins>
-        <coin x="5" y="5" z="5" />
+        <coin x="-1" y="10" z="15" lrg="" />
+        <coin x="-5" y="10" z="15" />
     </coins>
 </geometry>
