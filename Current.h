@@ -8,8 +8,8 @@ using namespace Polycode;
 class Current : public EventHandler {
 private:
     Core *core;
-    
-    Number alpha, beta;
+
+    Number camRad, camElev, camRot;
     bool mouse_clicked;
     bool left_pressed, right_pressed;
     bool further_pressed, closer_pressed;

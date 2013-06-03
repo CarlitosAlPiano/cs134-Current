@@ -1,11 +1,14 @@
 #include "DrawScene.h"
 
 #define ERROR(s)        {cout << "Error: " << s << ". Exiting application.\n"; exit(1);}
-#define DEF_WALL_COLOR  Color(0.0, 0.8, 1.0, 1.0)
-#define DEF_WL_BORD_COL Color(0.0, 0.5, 0.75, 1.0)
+#define DEF_CAM_RADIUS  40
+#define DEF_CAM_ROT     -1.7
+#define DEF_CAM_ELEV    0.3
 #define DEF_WALL_BORDER 4
 #define DEF_WALL_WIDTH  0.1
 #define DEF_WALL_HEIGHT 10
+#define DEF_WALL_COLOR  Color(0.0, 0.8, 1.0, 1.0)
+#define DEF_WL_BORD_COL Color(0.0, 0.5, 0.75, 1.0)
 #define DEF_OBST_COLOR  Color(1.0, 0.0, 0.0, 1.0)
 #define DEF_OBS_BRD_COL Color(1.0, 0.8, 0.4, 1.0)
 #define DEF_ENMY_COLOR  Color(0.9, 0.4, 0.8, 1.0)
@@ -28,7 +31,13 @@ deque<ScenePrimitive*>* DrawScene::obstacles;
 deque<Enemy*>* DrawScene::enemies;
 deque<Coin*>* DrawScene::coins;
 ScenePrimitive* DrawScene::player = NULL;
-Number DrawScene::wallHeight = DEF_WALL_HEIGHT;
+
+Number DrawScene::iniCamRad = DEF_CAM_RADIUS, DrawScene::iniCamElev = DEF_CAM_ELEV, DrawScene::iniCamRot = DEF_CAM_ROT;
+Number DrawScene::wallBorder = DEF_WALL_BORDER, DrawScene::wallWidth = DEF_WALL_WIDTH, DrawScene::wallHeight = DEF_WALL_HEIGHT;
+Color DrawScene::wallColor = DEF_WALL_COLOR, DrawScene::wallBordColor = DEF_WL_BORD_COL;
+Color DrawScene::obstColor = DEF_OBST_COLOR, DrawScene::obstBordColor = DEF_OBS_BRD_COL;
+Color DrawScene::enemyColor = DEF_ENMY_COLOR, DrawScene::enemyBordColor = DEF_ENM_BRD_COL;
+Color DrawScene::coinSmColor = DEF_COIN_SM_COL, DrawScene::coinLgColor = DEF_COIN_LG_COL;
 
 Enemy::Enemy(ScenePrimitive *enemy, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : enemy(enemy), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()), middlePos(enemy->getPosition()) {}
 
@@ -454,6 +463,10 @@ void DrawScene::drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<Sc
     /* PLAYER */
     node = geometry->first_node("player", 0, false);            // Find the tag 'player'
     drawPlayer(scene, node);                                    // Read and draw the player
+    
+    scene->enableFog(true);                                     // A bit of (blue) foggy effect to simulate water
+    scene->setFogProperties(Renderer::FOG_EXP, Color(0.0, 0.0, 0.2, 1.0), 0.005, -1000, 3000);
+    CoreServices::getInstance()->getRenderer()->setClippingPlanes(0.1, 5000);   // Set far plane very far: avoid weird visual effects!
     
     plyr = player;
 }

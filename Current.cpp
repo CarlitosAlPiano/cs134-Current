@@ -1,8 +1,9 @@
 #include "Current.h"
 
-#define VEL_CAM_Z       0.1
 #define VEL_PLAYER_INC  0.15
-#define VEL_MAX         0.25
+#define CAM_VEL_Z       0.1
+#define CAM_INC_ROT     0.03
+#define CAM_INC_ELEV    0.03
 #define BB_HALF_DEPTH   8
 #define BB_FRTH_LIMIT   currentZ + BB_HALF_DEPTH
 #define BB_CLSR_LIMIT   currentZ - BB_HALF_DEPTH
@@ -16,23 +17,22 @@ Current::Current(PolycodeView *view) {
     
 	scene = new CollisionScene();
     DrawScene::drawScene(scene, player, walls, obstacles, enemies, coins, "geometry.xml");
-    scene->getDefaultCamera()->setPosition(0, 25, -30);
-	scene->getDefaultCamera()->lookAt(Vector3(0,1,5));
     
-    totalElapsed = 0;
-    lastCollision = 0;
-    playerRad = player->getMesh()->getRadius();
-    playerVeloc = Vector3(0, 0, VEL_CAM_Z);
-    currentZ = player->getPosition().z;
-	alpha = 0;
-	beta = PI/2;
+    camRad = DrawScene::iniCamRad;
+	camRot = DrawScene::iniCamRot;
+	camElev = DrawScene::iniCamElev;
 	mouse_clicked = false;
 	left_pressed = false;
 	right_pressed = false;
-    up_pressed = false;
-    down_pressed = false;
 	further_pressed = false;
 	closer_pressed = false;
+    up_pressed = false;
+    down_pressed = false;
+    playerVeloc = Vector3(0, 0, CAM_VEL_Z);
+    playerRad = player->getMesh()->getRadius();
+    currentZ = player->getPosition().z;
+    totalElapsed = 0;
+    lastCollision = 0;
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEMOVE);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEDOWN);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEUP);
@@ -62,11 +62,11 @@ void Current::recomputePlayerVeloc() {
         playerVeloc.y = -VEL_PLAYER_INC;
     }
     if(further_pressed == closer_pressed){
-        playerVeloc.z = VEL_CAM_Z;
+        playerVeloc.z = CAM_VEL_Z;
     }else if(further_pressed){
-        playerVeloc.z = VEL_CAM_Z + VEL_PLAYER_INC;
+        playerVeloc.z = VEL_PLAYER_INC + CAM_VEL_Z;
     }else{
-        playerVeloc.z = /*VEL_CAM_Z*/ - VEL_PLAYER_INC;
+        playerVeloc.z =-VEL_PLAYER_INC /*+ CAM_VEL_Z*/;
     }
 }
 
@@ -92,7 +92,7 @@ bool Current::checkPlayerCollision(ScenePrimitive *obstacle) {
 void Current::keepPlayerWithinBB(){
     Vector3 pos = player->getPosition();
     
-    currentZ += VEL_CAM_Z;
+    currentZ += CAM_VEL_Z;
     if(pos.z > BB_FRTH_LIMIT){
         player->setPositionZ(BB_FRTH_LIMIT);
     }else if(pos.z < BB_CLSR_LIMIT){
@@ -114,18 +114,26 @@ void Current::handleEvent(Event *e) {
         switch(e->getEventCode()) {
             case InputEvent::EVENT_MOUSEMOVE:
                 if(inputEvent->mousePosition.x > mouse_x && mouse_clicked){
-                    beta -= 0.03;
+                    camRot += CAM_INC_ROT;
+                    if(camRot > PI) camRot -= 2*PI;
+                    cout << "camRot: " << camRot << "; \t camElev: " << camElev << "\n";
                     mouse_x = inputEvent->mousePosition.x;
                 }else if(inputEvent->mousePosition.x < mouse_x && mouse_clicked){
-                    beta += 0.03;
+                    camRot -= CAM_INC_ROT;
+                    if(camRot < -PI) camRot += 2*PI;
+                    cout << "camRot: " << camRot << "; \t camElev: " << camElev << "\n";
                     mouse_x = inputEvent->mousePosition.x;
                 }
                 if(inputEvent->mousePosition.y > mouse_y && mouse_clicked){
-                    //alpha += 0.5;
-                    //mouse_y = inputEvent->mousePosition.y;
+                    camElev += CAM_INC_ELEV;
+                    if(camElev > PI/2) camElev = PI/2;
+                    cout << "camRot: " << camRot << "; \t camElev: " << camElev << "\n";
+                    mouse_y = inputEvent->mousePosition.y;
                 } else if(inputEvent->mousePosition.y < mouse_y && mouse_clicked) {
-                    //alpha -= 0.01;
-                    //mouse_y = inputEvent->mousePosition.y;
+                    camElev -= CAM_INC_ELEV;
+                    if(camElev < 0.1) camElev = 0.1;
+                    cout << "camRot: " << camRot << "; \t camElev: " << camElev << "\n";
+                    mouse_y = inputEvent->mousePosition.y;
                 }
                 break;
             case InputEvent::EVENT_MOUSEDOWN:
@@ -192,19 +200,12 @@ bool Current::Update() {
 	Number elapsed = core->getElapsed();
     totalElapsed += elapsed;
     
-    //e1->update(totalElapsed);
-    //e2->update(totalElapsed);
-    
-    /*Vector3 newCamPos = scene->getDefaultCamera()->getPosition();
-    newCamPos.x = -15 * cos(beta) * cos(alpha) + 20;
-	newCamPos.y = -15 * cos(beta) * sin(alpha) + 50;
-	newCamPos.z = -15 * sin(beta);// + currentZ;
-    
-    scene->getDefaultCamera()->setPosition(newCamPos);
-    scene->getDefaultCamera()->lookAt(Vector3(0, DrawScene::wallHeight/2, 20));*/
-    //scene->getDefaultCamera()->lookAt(Vector3(0, DrawScene::wallHeight/2, currentZ));
-    scene->getDefaultCamera()->setPositionZ(scene->getDefaultCamera()->getPosition().z + VEL_CAM_Z);
     keepPlayerWithinBB();
+	scene->getDefaultCamera()->setPositionX(camRad*cos(camElev)*cos(camRot));
+    scene->getDefaultCamera()->setPositionY(camRad*sin(camElev) + 10);
+	scene->getDefaultCamera()->setPositionZ(camRad*cos(camElev)*sin(camRot) + currentZ);
+    scene->getDefaultCamera()->lookAt(Vector3(0, DrawScene::wallHeight/2, currentZ));
+
     for(size_t i=0; i<coins.size(); i++){
         if(coins.at(i)->coin->visible){
             coins.at(i)->update(totalElapsed);

@@ -74,7 +74,13 @@ private:
     static void drawCoins(CollisionScene *scene, xml_node<> *node);
     static void drawPlayer(CollisionScene *scene, xml_node<> *node);
 public:
-    static Number wallHeight;
+    static Number iniCamRad, iniCamElev, iniCamRot;
+    static Number wallBorder, wallWidth, wallHeight;
+    static Color wallColor, wallBordColor;
+    static Color obstColor, obstBordColor;
+    static Color enemyColor, enemyBordColor;
+    static Color coinSmColor, coinLgColor;
+
     static void drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<ScenePrimitive*>& wlls, deque<ScenePrimitive*>& obstcls, deque<Enemy*>& enemies, deque<Coin*>& coins, const char *strFile);
 };
 
