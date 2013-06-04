@@ -22,9 +22,11 @@ private:
     deque<Coin*> coins;
     ScenePrimitive *player;
     Vector3 playerVeloc;
-    Number playerRad, currentZ;
+    Number playerRad, currentZ, playerHealth;
     Number totalElapsed, lastCollision;
+    unsigned int points;
     
+    void playerSubtractHealth(Number healthSub = 0.0, bool checkLastCollision = true);
     void recomputePlayerVeloc();
     bool checkPlayerCollision(ScenePrimitive *obstacle);
     void keepPlayerWithinBB();

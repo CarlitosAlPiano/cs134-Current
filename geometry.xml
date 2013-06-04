@@ -1,7 +1,10 @@
 <geometry>
-    <general>
-    </general>
-    <walls r="0.0" g="0.8" b="1.0" a="1.0" w="0.2">
+    <scene>
+        <sound enbl="0" />
+        <camera elev="25" rot="-100" />
+        <fog enbl="1" dens="0.02" />
+    </scene>
+    <walls r="0" g="0.6" b="0.8" bordR="0" bordG="0.3" bordB="0.5">
         <vertex x="10" z="0" />
         <vertex x="10" z="10" />
         <vertex x="12" z="15" />
@@ -17,16 +20,16 @@
         <vertex x="-10" z="10" />
         <vertex x="-10" z="0" />
     </walls>
-    <obstacles>
-        <obstacle type="BOX" w="6" h="5" d="3" x="7" y="2.5" z="3" r="1.0" g="0.5" b="0.2" a="1.0" bord="3" />
-        <obstacle type="CYLINDER" rad="3" h="5" x="-5" y="2.5" z="15" bord="2" />
-        <obstacle type="CYLINDER" rad="2" h="10" x="10" y="5" z="25" bord="2" />
+    <obstacles r="0" g="1" b="0.3" bord="1" bordR="0" bordG="0.5" bordB="0.5">
+        <obstacle type="BOX" w="6" h="5" d="3" x="7" y="2.5" z="3" />
+        <obstacle type="CYLINDER" rad="3" h="5" x="-5" y="2.5" z="15" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="10" y="5" z="25" />
     </obstacles>
-    <enemies>
-        <enemy type="BOX" w="3" h="10" d="3" x="0" y="5" z="35" amp="10" bord="1" />
-        <enemy type="CYLINDER" rad="3" h="5" x="-1" y="2.5" z="42" amp="7" vel="2" offs="1.8" dirX="1" dirY="0" dirZ="1" bord="1" />
+    <enemies r="0" g="1" b="0.3" bord="1" bordR="0" bordG="0.5" bordB="0.5">
+        <enemy type="BOX" w="3" h="10" d="3" x="0" y="5" z="35" amp="10" />
+        <enemy type="CYLINDER" rad="3" h="5" x="-1" y="2.5" z="42" amp="7" vel="2" offs="90" dirX="1" dirY="0" dirZ="1" />
     </enemies>
-    <coins>
+    <coins ptsSm="1" ptsLg="3" rotV="75" smR="1" smG="0.85" smB="0" lgR="1" lgG="0.6" lgB="0.15">
         <coin x="-1" y="10" z="15" lrg="" />
         <coin x="-5" y="10" z="15" />
     </coins>

@@ -1,13 +1,15 @@
 #include "Current.h"
 
+#define PLYR_INI_HEALTH 100.0
 #define VEL_PLAYER_INC  0.15
 #define CAM_VEL_Z       0.1
 #define CAM_INC_ROT     0.03
 #define CAM_INC_ELEV    0.03
+#define CAM_MAX_ELEV    PI/2 - 0.01
 #define BB_HALF_DEPTH   8
-#define BB_FRTH_LIMIT   currentZ + BB_HALF_DEPTH
-#define BB_CLSR_LIMIT   currentZ - BB_HALF_DEPTH
-#define BB_TOP_LIMIT    DrawScene::wallHeight - playerRad
+#define BB_FRTH_LIMIT   (currentZ + BB_HALF_DEPTH)
+#define BB_CLSR_LIMIT   (currentZ - BB_HALF_DEPTH)
+#define BB_TOP_LIMIT    (DrawScene::wallHeight - playerRad)
 #define BB_BTM_LIMIT    playerRad
 #define TIME_BTWN_COLL  0.5
 
@@ -33,17 +35,40 @@ Current::Current(PolycodeView *view) {
     currentZ = player->getPosition().z;
     totalElapsed = 0;
     lastCollision = 0;
+    playerHealth = PLYR_INI_HEALTH;
+    points = 0;
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEMOVE);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEDOWN);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEUP);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_KEYDOWN);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_KEYUP);
     Coin::sndCatch = new Sound("coin.ogg");
-    Sound *s = new Sound("background.ogg");
-    s->Play(true);
+    if(DrawScene::backgndMusicEn){
+        Sound *s = new Sound("background.ogg");
+        s->Play(true);
+    }
 }
 
 Current::~Current() {
+}
+
+void Current::playerSubtractHealth(Number healthSub, bool checkLastCollision){
+    Number t;
+
+    if(totalElapsed-lastCollision>TIME_BTWN_COLL || !checkLastCollision){
+        if(checkLastCollision) lastCollision = totalElapsed;    // Keep track of the last time a collision took place
+        if(healthSub <= 0) healthSub = 10 + (random()%10);      // Reduce health by 10~20 by default
+        playerHealth -= healthSub;
+        cout << "Health: " << playerHealth << " (subtracted " << healthSub << ")\n";
+        if(playerHealth <= 0){
+            cout << "GAME OVER!\n";
+            core->paused = true;
+            core->Shutdown();                                   // If dead, end game
+            exit(EXIT_FAILURE);
+        }
+        t = playerHealth/PLYR_INI_HEALTH;
+        player->color = DrawScene::playerColor*t + DrawScene::playerDeadColor*(1-t);
+    }
 }
 
 void Current::recomputePlayerVeloc() {
@@ -72,17 +97,20 @@ void Current::recomputePlayerVeloc() {
 
 bool Current::checkPlayerCollision(ScenePrimitive *obstacle) {
     CollisionResult res = scene->testCollision(player, obstacle);
-    Vector3 normal = res.colNormal, oldPos = player->getPosition();//, oldVel = playerVeloc;
-    if(abs(normal.x) < 10e-6) normal.x = 0;
-    if(abs(normal.y) < 10e-6) normal.y = 0;
-    if(abs(normal.z) < 10e-6) normal.z = 0;
+    Vector3 normal = res.colNormal, oldPos = player->getPosition();
+    if(abs(normal.x) < 1e-6) normal.x = 0;
+    if(abs(normal.y) < 1e-6) normal.y = 0;
+    if(abs(normal.z) < 1e-6) normal.z = 0;
     normal.Normalize();
     
     if(res.collided && res.colNormal.length() > 0) {
         if(res.colNormal.angleBetween(playerVeloc)*180/PI < 91){
-            playerVeloc = normal.crossProduct(playerVeloc).crossProduct(normal);
+            playerVeloc = normal.crossProduct(playerVeloc).crossProduct(normal);    // Only keep tangencial velocity (v_normal = 0)
         }
         player->setPosition(oldPos + res.colNormal*res.colDist + playerVeloc);
+        if(player->getPosition().z < BB_CLSR_LIMIT){                                // If collision puts player outside BB -> Immediately subtract health
+            playerSubtractHealth(8*abs(player->getPosition().z - BB_CLSR_LIMIT), false);
+        }
         return true;
     }
 
@@ -116,23 +144,19 @@ void Current::handleEvent(Event *e) {
                 if(inputEvent->mousePosition.x > mouse_x && mouse_clicked){
                     camRot += CAM_INC_ROT;
                     if(camRot > PI) camRot -= 2*PI;
-                    cout << "camRot: " << camRot << "; \t camElev: " << camElev << "\n";
                     mouse_x = inputEvent->mousePosition.x;
                 }else if(inputEvent->mousePosition.x < mouse_x && mouse_clicked){
                     camRot -= CAM_INC_ROT;
                     if(camRot < -PI) camRot += 2*PI;
-                    cout << "camRot: " << camRot << "; \t camElev: " << camElev << "\n";
                     mouse_x = inputEvent->mousePosition.x;
                 }
                 if(inputEvent->mousePosition.y > mouse_y && mouse_clicked){
                     camElev += CAM_INC_ELEV;
-                    if(camElev > PI/2) camElev = PI/2;
-                    cout << "camRot: " << camRot << "; \t camElev: " << camElev << "\n";
+                    if(camElev > CAM_MAX_ELEV) camElev = CAM_MAX_ELEV;
                     mouse_y = inputEvent->mousePosition.y;
                 } else if(inputEvent->mousePosition.y < mouse_y && mouse_clicked) {
                     camElev -= CAM_INC_ELEV;
-                    if(camElev < 0.1) camElev = 0.1;
-                    cout << "camRot: " << camRot << "; \t camElev: " << camElev << "\n";
+                    if(camElev < 0) camElev = 0;
                     mouse_y = inputEvent->mousePosition.y;
                 }
                 break;
@@ -164,6 +188,8 @@ void Current::handleEvent(Event *e) {
                     case 'S':
                         down_pressed = true;
                         break;
+                    case KEY_ESCAPE:
+                        core->paused = !core->paused;
                 }
                 recomputePlayerVeloc();
                 break;
@@ -197,12 +223,13 @@ void Current::handleEvent(Event *e) {
 }
 
 bool Current::Update() {
+    if(core->paused) return core->updateAndRender();
 	Number elapsed = core->getElapsed();
     totalElapsed += elapsed;
     
     keepPlayerWithinBB();
 	scene->getDefaultCamera()->setPositionX(camRad*cos(camElev)*cos(camRot));
-    scene->getDefaultCamera()->setPositionY(camRad*sin(camElev) + 10);
+    scene->getDefaultCamera()->setPositionY(camRad*sin(camElev) + DrawScene::wallHeight);
 	scene->getDefaultCamera()->setPositionZ(camRad*cos(camElev)*sin(camRot) + currentZ);
     scene->getDefaultCamera()->lookAt(Vector3(0, DrawScene::wallHeight/2, currentZ));
 
@@ -210,34 +237,23 @@ bool Current::Update() {
         if(coins.at(i)->coin->visible){
             coins.at(i)->update(totalElapsed);
             CollisionResult res = scene->testCollision(player, coins.at(i)->coin);
-            if(res.collided){
-                coins.at(i)->catchCoin();
-                // Increase points!
-            }
+            if(res.collided) coins.at(i)->catchCoin(points);
         }
     }
     for(size_t i=0; i<enemies.size(); i++){
         enemies.at(i)->update(totalElapsed);
         if(checkPlayerCollision(enemies.at(i)->enemy)){
-            if(totalElapsed-lastCollision > TIME_BTWN_COLL){
-                player->color.r -= 0.2;
-                lastCollision = totalElapsed;
-            }
-            //return core->updateAndRender();
+            playerSubtractHealth();
         }
     }
     for(size_t i=0; i<obstacles.size(); i++){
         if(checkPlayerCollision(obstacles.at(i))){
-            if(totalElapsed-lastCollision > TIME_BTWN_COLL){
-                player->color.r -= 0.2;
-                lastCollision = totalElapsed;
-            }
-            //return core->updateAndRender();
+            playerSubtractHealth();
         }
     }
     for(size_t i=0; i<walls.size(); i++){
         if(checkPlayerCollision(walls.at(i))){
-            //return core->updateAndRender();
+            ////////////
         }
     }
     
