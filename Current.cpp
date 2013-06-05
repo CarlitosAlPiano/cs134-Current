@@ -2,14 +2,15 @@
 
 #define PLYR_INI_HEALTH 100.0
 #define VEL_PLAYER_INC  0.15
-#define CAM_VEL_Z       0.1
+#define SPEED_FACTOR    50
+#define CAM_VEL_Z       (SPEED_FACTOR/pow(riverWidth,2))
 #define CAM_INC_ROT     0.03
 #define CAM_INC_ELEV    0.03
 #define CAM_MAX_ELEV    PI/2 - 0.01
 #define BB_HALF_DEPTH   8
 #define BB_FRTH_LIMIT   (currentZ + BB_HALF_DEPTH)
 #define BB_CLSR_LIMIT   (currentZ - BB_HALF_DEPTH)
-#define BB_TOP_LIMIT    (DrawScene::wallHeight - playerRad)
+#define BB_TOP_LIMIT    (Wall::height - playerRad)
 #define BB_BTM_LIMIT    playerRad
 #define TIME_BTWN_COLL  0.5
 
@@ -18,7 +19,10 @@ Current::Current(PolycodeView *view) {
 	CoreServices::getInstance()->getResourceManager()->addDirResource("default", false);
     
 	scene = new CollisionScene();
+    lRiverWidth = new SceneLine(Vector3(), Vector3());
+    scene->addChild(lRiverWidth);
     DrawScene::drawScene(scene, player, walls, obstacles, enemies, coins, "geometry.xml");
+    computeRiverWidth();
     
     camRad = DrawScene::iniCamRad;
 	camRot = DrawScene::iniCamRot;
@@ -44,13 +48,12 @@ Current::Current(PolycodeView *view) {
 	core->getInput()->addEventListener(this, InputEvent::EVENT_KEYUP);
     Coin::sndCatch = new Sound("coin.ogg");
     if(DrawScene::backgndMusicEn){
-        Sound *s = new Sound("background.ogg");
-        s->Play(true);
+        bgndMusic = new Sound("level1_bkgnd.ogg");
+        bgndMusic->Play(true);
     }
 }
 
-Current::~Current() {
-}
+Current::~Current() {}
 
 void Current::playerSubtractHealth(Number healthSub, bool checkLastCollision){
     Number t;
@@ -67,7 +70,7 @@ void Current::playerSubtractHealth(Number healthSub, bool checkLastCollision){
             exit(EXIT_FAILURE);
         }
         t = playerHealth/PLYR_INI_HEALTH;
-        player->color = DrawScene::playerColor*t + DrawScene::playerDeadColor*(1-t);
+        player->color = Player::defColor*t + Player::deadColor*(1-t);
     }
 }
 
@@ -91,7 +94,7 @@ void Current::recomputePlayerVeloc() {
     }else if(further_pressed){
         playerVeloc.z = VEL_PLAYER_INC + CAM_VEL_Z;
     }else{
-        playerVeloc.z =-VEL_PLAYER_INC /*+ CAM_VEL_Z*/;
+        playerVeloc.z =-VEL_PLAYER_INC;
     }
 }
 
@@ -105,16 +108,46 @@ bool Current::checkPlayerCollision(ScenePrimitive *obstacle) {
     
     if(res.collided && res.colNormal.length() > 0) {
         if(res.colNormal.angleBetween(playerVeloc)*180/PI < 91){
-            playerVeloc = normal.crossProduct(playerVeloc).crossProduct(normal);    // Only keep tangencial velocity (v_normal = 0)
+            //playerVeloc = normal.crossProduct(playerVeloc).crossProduct(normal);    // Only keep tangencial velocity (v_normal = 0)
         }
         player->setPosition(oldPos + res.colNormal*res.colDist + playerVeloc);
         if(player->getPosition().z < BB_CLSR_LIMIT){                                // If collision puts player outside BB -> Immediately subtract health
-            playerSubtractHealth(8*abs(player->getPosition().z - BB_CLSR_LIMIT), false);
+            if(normal.dot(Vector3(0,0,1)) > 0.5)    // Only if wall is a diagonal like this /\; Don't subtract health if it's like this: \/
+                playerSubtractHealth(8*abs(player->getPosition().z - BB_CLSR_LIMIT)*normal.dot(Vector3(0,0,1)), false);
         }
         return true;
     }
 
     return false;
+}
+
+void Current::computeRiverWidth(){
+    priority_queue<Vector2, vector<Vector2>, CompareVector2> q;
+    Vector3 playerPos3 = player->getPosition();
+    Vector2 dir(1, 0), pt, lastPt, playerPos(playerPos3.x, playerPos3.z);
+    
+    for(size_t i=0; i<walls.size(); i++){
+        pt = playerPos;
+        if(walls.at(i)->intersects(dir, pt)){           // From the player's position, throw a ray of dir (1, 0, 0)
+            q.push(pt);                                 // Fill in the queue with all intersection points
+        }
+    }
+    
+    if(q.empty() || playerPos.x < q.top().x){           // Is player even further away than 1st wall (sorted by "x" coord)?
+        playerSubtractHealth(PLYR_INI_HEALTH, false);   // This should never happen. Kill player
+        return;
+    }
+    while(!q.empty()){
+        if(q.top().x > playerPos.x){                    // Iterate until a point with higher "x" than player's is found
+            riverWidth = lastPt.distance(q.top());      // In that case, width = distance{last point, current point}
+            lRiverWidth->setStart(Vector3(lastPt.x, playerPos3.y, lastPt.y));
+            lRiverWidth->setEnd(Vector3(q.top().x, playerPos3.y, q.top().y));
+            return;
+        }
+        lastPt = q.top();
+        q.pop();                                        // If point wasn't the one I'm looking for, delete it
+    }
+    playerSubtractHealth(PLYR_INI_HEALTH, false);       // This should never happen either. Kill player (it's even further away than last wall, sorted by "x" coord!)
 }
 
 void Current::keepPlayerWithinBB(){
@@ -135,6 +168,7 @@ void Current::keepPlayerWithinBB(){
 
 void Current::handleEvent(Event *e) {
     static Number mouse_x = 0, mouse_y = 0;
+    static int bgndMusicOffset = 0;
 
     if(e->getDispatcher() == core->getInput()) {
         InputEvent *inputEvent = (InputEvent*)e;
@@ -190,6 +224,13 @@ void Current::handleEvent(Event *e) {
                         break;
                     case KEY_ESCAPE:
                         core->paused = !core->paused;
+                        if(core->paused){
+                            bgndMusicOffset = bgndMusic->getOffset();
+                            bgndMusic->Stop();
+                        }else{
+                            bgndMusic->Play(true);
+                            bgndMusic->setOffset(bgndMusicOffset);
+                        }
                 }
                 recomputePlayerVeloc();
                 break;
@@ -227,37 +268,42 @@ bool Current::Update() {
 	Number elapsed = core->getElapsed();
     totalElapsed += elapsed;
     
+    computeRiverWidth();
     keepPlayerWithinBB();
 	scene->getDefaultCamera()->setPositionX(camRad*cos(camElev)*cos(camRot));
-    scene->getDefaultCamera()->setPositionY(camRad*sin(camElev) + DrawScene::wallHeight);
+    scene->getDefaultCamera()->setPositionY(camRad*sin(camElev) + Wall::height);
 	scene->getDefaultCamera()->setPositionZ(camRad*cos(camElev)*sin(camRot) + currentZ);
-    scene->getDefaultCamera()->lookAt(Vector3(0, DrawScene::wallHeight/2, currentZ));
+    scene->getDefaultCamera()->lookAt(Vector3(0, Wall::height/2, currentZ));
 
-    for(size_t i=0; i<coins.size(); i++){
+    if(checkPlayerCollision(walls.front()->wall)){  // Check if player "collided" with goal wall
+        cout << "YOU WON!!\n";
+        core->paused = true;
+        core->Shutdown();                           // For now, finish game
+        exit(EXIT_SUCCESS);
+        
+    }
+    for(size_t i=0; i<coins.size(); i++){           // COINS
         if(coins.at(i)->coin->visible){
             coins.at(i)->update(totalElapsed);
             CollisionResult res = scene->testCollision(player, coins.at(i)->coin);
             if(res.collided) coins.at(i)->catchCoin(points);
         }
     }
-    for(size_t i=0; i<enemies.size(); i++){
+    for(size_t i=0; i<enemies.size(); i++){         // ENEMIES
         enemies.at(i)->update(totalElapsed);
         if(checkPlayerCollision(enemies.at(i)->enemy)){
             playerSubtractHealth();
         }
     }
-    for(size_t i=0; i<obstacles.size(); i++){
+    for(size_t i=0; i<obstacles.size(); i++){       // OBSTACLES
         if(checkPlayerCollision(obstacles.at(i))){
             playerSubtractHealth();
         }
     }
-    for(size_t i=0; i<walls.size(); i++){
-        if(checkPlayerCollision(walls.at(i))){
-            ////////////
-        }
+    for(size_t i=1; i<walls.size(); i++){           // WALLS
+        checkPlayerCollision(walls.at(i)->wall);
     }
-    
-	player->setPosition(player->getPosition() + playerVeloc);
+    player->setPosition(player->getPosition() + playerVeloc);
 	
     return core->updateAndRender();
 }

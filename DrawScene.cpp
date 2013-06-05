@@ -1,24 +1,27 @@
 #include "DrawScene.h"
 
 #define ERROR(s)        {cout << "Error: " << s << ". Exiting application.\n"; exit(EXIT_FAILURE);}
+#define DEF_MUSIC_EN    true
 #define DEF_CAM_RADIUS  40
-#define DEF_CAM_ROT     -1.7
-#define DEF_CAM_ELEV    0.3
+#define DEF_CAM_ROT     -100*PI/180
+#define DEF_CAM_ELEV    20*PI/180
 #define CAM_MIN_RADIUS  20
 #define CAM_MAX_ELEV    (PI/2 - 0.01)
-#define DEF_OBST_BORDER 2
-#define DEF_ENMY_BORDER 2
-#define DEF_WALL_BORDER 5
-#define DEF_WALL_WIDTH  0.1
+#define DEF_FOG_DENS    0.02
+#define DEF_FOG_COLOR   Color(0.0, 0.0, 0.2, 1.0)
+#define DEF_OBST_BORDER 1
+#define DEF_ENMY_BORDER 1
+#define DEF_WALL_BORDER 3
+#define DEF_WALL_WIDTH  0.0
 #define DEF_WALL_HEIGHT 10
-#define DEF_WALL_COLOR  Color(0.0, 0.8, 1.0, 1.0)
-#define DEF_WL_BORD_COL Color(0.0, 0.5, 0.75, 1.0)
-#define DEF_OBST_COLOR  Color(0.2, 0.4, 0.8, 1.0)
-#define DEF_OBS_BRD_COL Color(0.6, 0.1, 0.1, 1.0)
-#define DEF_ENMY_COLOR  Color(0.2, 0.4, 0.8, 1.0)
-#define DEF_ENM_BRD_COL Color(0.6, 0.1, 0.1, 1.0)
-#define DEF_COIN_SM_COL Color(1.0, 0.8, 0.1, 1.0)
-#define DEF_COIN_LG_COL Color(1.0, 0.5, 0.2, 1.0)
+#define DEF_WALL_COLOR  Color(0.0, 0.6, 0.8, 1.0)
+#define DEF_WL_BORD_COL Color(0.0, 0.3, 0.5, 1.0)
+#define DEF_OBST_COLOR  Color(0.0, 1.0, 0.3, 1.0)
+#define DEF_OBS_BRD_COL Color(0.0, 0.5, 0.5, 1.0)
+#define DEF_ENMY_COLOR  Color(0.0, 1.0, 0.3, 1.0)
+#define DEF_ENM_BRD_COL Color(0.0, 0.5, 0.5, 1.0)
+#define DEF_COIN_SM_COL Color(1.0, 0.8, 0.0, 1.0)
+#define DEF_COIN_LG_COL Color(1.0, 0.5, 0.1, 1.0)
 #define COIN_SM_PARAMS  ScenePrimitive::TYPE_CYLINDER, 0.1, 1, 30
 #define COIN_LG_PARAMS  ScenePrimitive::TYPE_CYLINDER, 0.15, 1.1, 30
 #define DEF_PLAY_TYPE   ScenePrimitive::TYPE_SPHERE
@@ -27,14 +30,12 @@
 #define DEF_PLAY_POS    Vector3(0, 1.5, 0)
 #define DEF_PLAY_COLOR  Color(1.0, 1.0, 0.0, 1.0)
 #define DEF_PL_DEAD_COL Color(1.0, 0.0, 0.0, 1.0)
-#define DEF_FOG_COLOR   Color(0.0, 0.0, 0.2, 1.0)
-#define DEF_FOG_DENS    0.005
-#define DEF_MUSIC_EN    true
 
+Number Wall::width = DEF_WALL_WIDTH, Wall::height = DEF_WALL_HEIGHT;
 unsigned int Coin::valueSm = 1, Coin::valueLg = 3;
 Number Coin::rotationVel = 50;
 Sound *Coin::sndCatch = NULL;
-deque<ScenePrimitive*>* DrawScene::walls = NULL;
+deque<Wall*>* DrawScene::walls = NULL;
 deque<ScenePrimitive*>* DrawScene::obstacles = NULL;
 deque<Enemy*>* DrawScene::enemies = NULL;
 deque<Coin*>* DrawScene::coins = NULL;
@@ -42,13 +43,58 @@ ScenePrimitive* DrawScene::player = NULL;
 
 bool DrawScene::backgndMusicEn = DEF_MUSIC_EN;
 Number DrawScene::iniCamRad = DEF_CAM_RADIUS, DrawScene::iniCamElev = DEF_CAM_ELEV, DrawScene::iniCamRot = DEF_CAM_ROT;
-Number DrawScene::wallWidth = DEF_WALL_WIDTH, DrawScene::wallHeight = DEF_WALL_HEIGHT;
-Number DrawScene::wallBorder = DEF_WALL_BORDER, DrawScene::obstBorder = DEF_OBST_BORDER, DrawScene::enemyBorder = DEF_ENMY_BORDER;
-Color DrawScene::wallColor = DEF_WALL_COLOR, DrawScene::wallBordColor = DEF_WL_BORD_COL;
-Color DrawScene::obstColor = DEF_OBST_COLOR, DrawScene::obstBordColor = DEF_OBS_BRD_COL;
-Color DrawScene::enemyColor = DEF_ENMY_COLOR, DrawScene::enemyBordColor = DEF_ENM_BRD_COL;
-Color DrawScene::coinSmColor = DEF_COIN_SM_COL, DrawScene::coinLgColor = DEF_COIN_LG_COL;
-Color DrawScene::playerColor = DEF_PLAY_COLOR, DrawScene::playerDeadColor = DEF_PL_DEAD_COL;
+Number Wall::defBorder = DEF_WALL_BORDER, Obstacle::defBorder = DEF_OBST_BORDER, Enemy::defBorder = DEF_ENMY_BORDER;
+Color Wall::defColor = DEF_WALL_COLOR, Wall::defBordColor = DEF_WL_BORD_COL;
+Color Obstacle::defColor = DEF_OBST_COLOR, Obstacle::defBordColor = DEF_OBS_BRD_COL;
+Color Enemy::defColor = DEF_ENMY_COLOR, Enemy::defBordColor = DEF_ENM_BRD_COL;
+Color Coin::colorSm = DEF_COIN_SM_COL, Coin::colorLg = DEF_COIN_LG_COL;
+Color Player::defColor = DEF_PLAY_COLOR, Player::deadColor = DEF_PL_DEAD_COL;
+
+Wall::Wall(CollisionScene *scene, Vector3 lastVertex, Vector3 newVertex, Number border, Color color, Color bordColor){
+    start = Vector2(lastVertex.x, lastVertex.z);// Get the start and end points of the wall from its vertices (ignore "y" coord)
+    end = Vector2(newVertex.x, newVertex.z);
+    lastVertex.y = height/2;                    // Make sure to set the "y" coord to height/2 (so that wall's "y" ranges 0~height)
+    newVertex.y = height/2;
+    wall = new ScenePrimitive(ScenePrimitive::TYPE_BOX, height, width, newVertex.distance(lastVertex));
+    wall->setPosition((lastVertex+newVertex)/2);// Set the wall's "center", color, and make it point in the direction start->end
+    wall->setColor(color);
+    wall->lookAt(newVertex, Vector3(0, 1, 0).crossProduct(newVertex-lastVertex));
+    scene->addCollisionChild(wall, CollisionSceneEntity::SHAPE_BOX);
+    drawWallBorder(scene, border, bordColor);   // After adding it to the scene, draw its border (if needed)
+}
+
+void Wall::drawWallBorder(CollisionScene *scene, Number border, Color borderCol){
+    if(border <= 0) return;                     // Only render border if a positive value is read
+    ScenePrimitive *wallBorder;                 // Plane with the same size and orientation as the wall specified by the given vertices
+    Vector3 startPt(start.x, height/2, start.y), endPt(end.x, height/2, end.y);
+    
+    wallBorder = new ScenePrimitive(ScenePrimitive::TYPE_PLANE, height, start.distance(end));
+    wallBorder->setPosition((startPt+endPt)/2); // Set the border's "center", color, and make it point in the direction start->end
+    wallBorder->setColor(borderCol);
+    wallBorder->lookAt(endPt, Vector3(0, 1, 0).crossProduct(endPt-startPt));
+    wallBorder->lineWidth = border;             // Set the desired border width
+    wallBorder->renderWireframe = true;
+    scene->addChild(wallBorder);                // Lastly, add the border to the scene
+}
+
+Vector2 Wall::getSegment(){
+    return end-start;
+}
+
+bool Wall::intersects(const Vector2& lDelta, Vector2& pt) {
+    Vector2 delta = getSegment(), lNormal(lDelta.y, -lDelta.x);
+    lNormal.Normalize();
+    Number t, eps=1e-12f, denom = lNormal.dot(delta);
+    
+    //cout << "Checking intersection between: WALL {" << start.x << "," << start.y << " -> " << end.x << "," << end.y << "} LINE {" << pt.x << "," << pt.y << "; Dir: " << lDelta.x << "," << lDelta.y << "}\n";
+    
+    if(denom == 0) return false;        // Parallel lines: no intersection
+    t = lNormal.dot(pt-start)/denom;    // t = (l.N * (l.p1-p1))/(l.N * (p2-p1))
+    if(t<-eps || t>1+eps) return false; // t must be within [0, 1] (due to precision errors, within [-eps, 1+eps])
+    
+    pt = start + getSegment()*t;        // pt = p1 + t(p2-p1)
+    return true;
+}
 
 Enemy::Enemy(ScenePrimitive *enemy, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : enemy(enemy), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()), middlePos(enemy->getPosition()) {}
 
@@ -58,19 +104,19 @@ void Enemy::update(Number totalElapsed){
     Vector3 oldPos = enemy->getPosition();
     
     enemy->setPosition(middlePos + movementDir*amplitude*sin(velocity*totalElapsed + offset));
-    if(border) border->Translate(enemy->getPosition() - oldPos);
+    if(border) border->Translate(enemy->getPosition() - oldPos);    // Not only update the enemy, but also its border!
 }
 
 Coin::Coin(CollisionScene *scene, Vector3 pos, bool hasSmallValue, Number offset) : hasSmallValue(hasSmallValue), offset(offset) {
     if(hasSmallValue){
         coin = new ScenePrimitive(COIN_SM_PARAMS);
-        coin->setColor(DrawScene::coinSmColor);
+        coin->setColor(colorSm);
     }else{
         coin = new ScenePrimitive(COIN_LG_PARAMS);
-        coin->setColor(DrawScene::coinLgColor);
+        coin->setColor(colorLg);
     }
     coin->setPosition(pos);
-    coin->setPitch(-90);
+    coin->setPitch(-90);    // Vertical
     scene->addCollisionChild(coin);
 }
 
@@ -82,7 +128,7 @@ void Coin::catchCoin(unsigned int &points){
 }
 
 void Coin::update(Number totalElapsed){
-    coin->setYaw(rotationVel*(totalElapsed + offset));
+    coin->setYaw(rotationVel*(totalElapsed + offset));  // Rotate the coin based on the total time elapsed
 }
 
 bool DrawScene::fileExists(const char *strFile){
@@ -145,9 +191,7 @@ void DrawScene::getMovementDir(Vector3& dir, xml_node<> *node){
 }
 
 Number DrawScene::getNumber(const char* attrName, xml_node<> *node, Number defValue, bool absVal){
-    xml_attribute<> *attr;
-    
-    attr = node->first_attribute(attrName, 0, false);
+    xml_attribute<> *attr = node->first_attribute(attrName, 0, false);
     if(!attr) return defValue;
     
     return (absVal)? abs(atof(attr->value())):atof(attr->value());  // Return the absolute value of the attribute unless absVal is false
@@ -189,15 +233,28 @@ Number DrawScene::getOffset(xml_node<> *node, Number defValue){
     return getNumber("offs", node, defValue)*PI/180;
 }
 
+bool DrawScene::isAttributeTrue(const char* attrName, xml_node<> *node, bool defValue){
+    xml_attribute<> *attr = node->first_attribute(attrName, 0, false);
+    if(!attr) return defValue;                                  // If attribute doesn't exist -> defValue
+    
+    string val = string(attr->value());
+    transform(val.begin(), val.end(), val.begin(), ::tolower);  // Store the lowercase version of the value
+    return (atof(attr->value())==1 || val.compare("true")==0);  // Valid values: '1' and 'true'
+}
+
 bool DrawScene::hasLargeValue(xml_node<> *node){
-    return node->first_attribute("lrg", 0, false);
+    return isAttributeTrue("lrg", node);
 }
 
 bool DrawScene::isTransparent(xml_node<> *node){
-    return node->first_attribute("t", 0, false);
+    return isAttributeTrue("t", node);
 }
 
-ScenePrimitive* DrawScene::iniPrimitive(int& shape, xml_node<> *node, Number numSegments){
+bool DrawScene::isGoal(xml_node<> *node){
+    return isAttributeTrue("goal", node);
+}
+
+ScenePrimitive* DrawScene::iniPrimitive(int& shape, xml_node<> *node,  bool boxReversed, Number numSegments){
     xml_attribute<> *attr;
     string type;
     Number a1, a2, a3;
@@ -211,8 +268,9 @@ ScenePrimitive* DrawScene::iniPrimitive(int& shape, xml_node<> *node, Number num
         shape = CollisionSceneEntity::SHAPE_BOX;
         a1 = getWidth(node, 1);
         a2 = getHeight(node, 1);
-        a3 = getDepth(node, 1);
-        
+        a3 = getDepth(node, 1);                     // NOTE: boxReversed is a fix to this issue: when method lookAt is called on a box entity the..
+                                                    // ..width and the depth values get 'reversed', so we reverse them again if boxReversed is true
+        if(boxReversed) return new ScenePrimitive(ScenePrimitive::TYPE_BOX, a3, a2, a1);
         return new ScenePrimitive(ScenePrimitive::TYPE_BOX, a1, a2, a3);
     }else if(type.compare("PLANE") == 0){
         shape = CollisionSceneEntity::SHAPE_PLANE;
@@ -236,19 +294,19 @@ ScenePrimitive* DrawScene::iniPrimitive(int& shape, xml_node<> *node, Number num
         return new ScenePrimitive(ScenePrimitive::TYPE_SPHERE, a1, numSegments, numSegments);
     }else if(type.compare("CYLINDER") == 0){
         shape = CollisionSceneEntity::SHAPE_CYLINDER;
-        a1 = getHeight(node, DrawScene::wallHeight);
+        a1 = getHeight(node, Wall::height);
         a2 = getRadius(node, 1);
         
         return new ScenePrimitive(ScenePrimitive::TYPE_CYLINDER, a1, a2, numSegments);
     }else if(type.compare("UNCAPPED_CYLINDER") == 0){
         shape = CollisionSceneEntity::SHAPE_CYLINDER;
-        a1 = getHeight(node, DrawScene::wallHeight);
+        a1 = getHeight(node, Wall::height);
         a2 = getRadius(node, 1);
         
         return new ScenePrimitive(ScenePrimitive::TYPE_UNCAPPED_CYLINDER, a1, a2, numSegments);
     }else if(type.compare("CONE") == 0){
         shape = CollisionSceneEntity::SHAPE_CONE;
-        a1 = getHeight(node, DrawScene::wallHeight);
+        a1 = getHeight(node, Wall::height);
         a2 = getRadius(node, 1);
         
         return new ScenePrimitive(ScenePrimitive::TYPE_CONE, a1, a2, numSegments);
@@ -263,21 +321,21 @@ ScenePrimitive* DrawScene::iniPrimitive(int& shape, xml_node<> *node, Number num
     return NULL;
 }
 
-ScenePrimitive* DrawScene::iniShapeBorder(CollisionScene *scene, Number border, int shape, Vector3 pos, Color col, xml_node<> *node){
+ScenePrimitive* DrawScene::iniShapeBorder(CollisionScene *scene, Number border, int shape, Vector3 pos, Color col, xml_node<> *node, bool boxReversed){
     if(border == 0.0) return NULL;                  // If border wasn't specified, exit
     ScenePrimitive *primBorder = NULL;
     
     switch(shape){                                  // Depending on the shape of the obstacle, we require different shapes for the borders
         case CollisionSceneEntity::SHAPE_BOX:
         case CollisionSceneEntity::SHAPE_PLANE:
-            primBorder = iniPrimitive(shape, node);
+            primBorder = iniPrimitive(shape, node, boxReversed);
             primBorder->getMesh()->setMeshType(Mesh::LINE_LOOP_MESH);
             primBorder->lineWidth = border;
             primBorder->renderWireframe = true;
             break;
         case CollisionSceneEntity::SHAPE_CYLINDER:
         case CollisionSceneEntity::SHAPE_CONE:
-            primBorder = iniPrimitive(shape, node, 300*border);
+            primBorder = iniPrimitive(shape, node, false, 300);
             primBorder->getMesh()->setMeshType(Mesh::POINT_MESH);
             break;
         case CollisionSceneEntity::SHAPE_SPHERE:
@@ -294,95 +352,75 @@ ScenePrimitive* DrawScene::iniShapeBorder(CollisionScene *scene, Number border, 
     return primBorder;
 }
 
-void DrawScene::drawWallBorder(CollisionScene *scene, Vector3 lastVertex, Vector3 newVertex, xml_node<> *node){
-    ScenePrimitive *wallBorder; // Plane with the same size and orientation as the wall specified by the given vertices
-    Number border = getBorder(node, DrawScene::wallBorder);
-    Color borderCol = DrawScene::wallBordColor;
-    getColor(borderCol, node, "bord");
-    if(border <= 0) return;     // Only render border if a positive value is read
-
-    wallBorder = new ScenePrimitive(ScenePrimitive::TYPE_PLANE, DrawScene::wallHeight, newVertex.distance(lastVertex));
-    wallBorder->setPosition((lastVertex+newVertex)/2);
-    wallBorder->setColor(borderCol);
-    wallBorder->lookAt(newVertex, Vector3(0, 1, 0).crossProduct(newVertex-lastVertex));
-    wallBorder->lineWidth = border;
-    wallBorder->renderWireframe = true;
-    scene->addChild(wallBorder);
-}
-
 void DrawScene::drawWalls(CollisionScene *scene, xml_node<> *ndWalls){
     if(!ndWalls) ERROR("Incorrect format: One child of 'geometry' must be 'walls'");
-    ScenePrimitive *scnPrimitive = NULL;
-    Vector3 lastVertex(0, wallHeight/2, 0), newVertex(0, wallHeight/2, 0);
-    Color color;
+    Wall *wall = NULL;
+    Vector3 lastVertex, newVertex;
+    Number border;
+    Color color, bordColor;
+    bool goalSaved = false;                     // True when a wall with the attribute 'goal' is read
     xml_node<> *node = ndWalls->first_node("vertex", 0, false); // Get 1st vertex and make sure there are at least 3 vertices (2 walls)
     if(!node || !node->next_sibling() || !node->next_sibling()->next_sibling()) ERROR("Incorrect format: The tag 'walls' must have at least 3 'vertex' children");
     
-    getColor(DrawScene::wallColor, ndWalls);    // Configure parameters by default (values in case not specified)
-    getColor(DrawScene::wallBordColor, ndWalls, "bord");
-    DrawScene::wallBorder = getBorder(ndWalls, DrawScene::wallBorder);
-    DrawScene::wallWidth = getWidth(ndWalls, DrawScene::wallWidth);
-    DrawScene::wallHeight = getHeight(ndWalls, DrawScene::wallHeight);
-    
-    /*Mesh *mesh = new Mesh(Mesh::POINT_MESH);
-    Polygon *poly = new Polygon();*/
+    getColor(Wall::defColor, ndWalls);          // Configure parameters by default (values in case not specified)
+    getColor(Wall::defBordColor, ndWalls, "bord");
+    Wall::defBorder = getBorder(ndWalls, Wall::defBorder);
+    Wall::width = getWidth(ndWalls, Wall::width);
+    Wall::height = getHeight(ndWalls, Wall::height);
     
     getPosition(lastVertex, node);              // Read the first vertex
-    lastVertex.y = wallHeight/2;
     while((node = node->next_sibling()) != 0){  // While there are vertices to read
         getPosition(newVertex, node);           // Read the current vertex
-        newVertex.y = wallHeight/2;
-        color = wallColor;
+        color = Wall::defColor;
         getColor(color, node);                  // Get the color of the wall (if given)
+        border = getBorder(node, Wall::defBorder);
+        bordColor = Wall::defBordColor;
+        getColor(bordColor, node, "bord");
         if(!isTransparent(node)){               // Draw wall if is not transparent
-            scnPrimitive = new ScenePrimitive(ScenePrimitive::TYPE_BOX, wallHeight, wallWidth, newVertex.distance(lastVertex));
-            scnPrimitive->setPosition((lastVertex+newVertex)/2);
-            scnPrimitive->setColor(color);
-            scnPrimitive->lookAt(newVertex, Vector3(0, 1, 0).crossProduct(newVertex-lastVertex));
-            walls->push_back(scnPrimitive);     // Store pointer in the queue walls
-            scene->addCollisionChild(walls->back(), CollisionSceneEntity::SHAPE_BOX);
-            drawWallBorder(scene, lastVertex, newVertex, node);
+            if(isGoal(node) && !goalSaved){     // Only allow one goal to be saved (at walls[0])
+                wall = new Wall(scene, lastVertex, newVertex, 0, color, bordColor);
+                goalSaved = true;
+                wall->wall->visible = false;    // Invisible wall!
+                walls->push_front(wall);        // Identify the goal by pushing the wall to the front
+            }else{
+                wall = new Wall(scene, lastVertex, newVertex, border, color, bordColor);
+                walls->push_back(wall);         // Store pointer in the back of the queue walls
+            }
         }
-        //poly->addVertex(lastVertex.x, 0, lastVertex.z);
         lastVertex = newVertex;                 // In the next iteration, lastVertex will be the current vertex
     }
-    /*poly->addVertex(lastVertex.x, 0, lastVertex.z);
-    mesh->addPolygon(poly);
-    SceneMesh *sm = new SceneMesh(mesh);
-    sm->setColor(1.0,0.0,1.0,1.0);
-    scene->addChild(sm);*/
 }
 
 void DrawScene::drawObstacles(CollisionScene *scene, xml_node<> *ndObstacles){
     if(!ndObstacles) ERROR("Incorrect format: One child of 'geometry' must be 'obstacles'");
     ScenePrimitive *scnPrimitive = NULL, *obsBorder = NULL;
-    Color obstacleCol, obstacleBordCol;
     Vector3 pos;
     Number border;
+    Color color, bordCol;
     int shape = CollisionSceneEntity::SHAPE_BOX;
     xml_node<> *node = ndObstacles->first_node("obstacle", 0, false);   // Get the first obstacle
     if(!node) ERROR("Incorrect format: The tag 'obstacles' must have at least 1 'obstacle' child");
     
-    getColor(DrawScene::obstColor, ndObstacles);                // Configure parameters by default (values in case not specified)
-    getColor(DrawScene::obstBordColor, ndObstacles, "bord");
-    DrawScene::obstBorder = getBorder(ndObstacles, DrawScene::obstBorder);
+    getColor(Obstacle::defColor, ndObstacles);                  // Configure parameters by default (values in case not specified)
+    getColor(Obstacle::defBordColor, ndObstacles, "bord");
+    Obstacle::defBorder = getBorder(ndObstacles, Obstacle::defBorder);
     
     do{
         scnPrimitive = iniPrimitive(shape, node);               // Initialize the obstacle (create instance of ScenePrimitive)
         if(scnPrimitive){
-            obstacleCol = obstColor;
-            getColor(obstacleCol, node);                        // Get its color
+            color = Obstacle::defColor;
+            getColor(color, node);                              // Get its color
             getPosition(pos, node);                             // And position
-            scnPrimitive->setColor(obstacleCol);                // Apply those settings
+            scnPrimitive->setColor(color);                      // Apply those settings
             scnPrimitive->setPosition(pos);
             scnPrimitive->backfaceCulled = false;
             obstacles->push_back(scnPrimitive);                 // Store pointer in the queue obstacles
             scene->addCollisionChild(obstacles->back(), shape); // And add the obstacle to the scene
-            obstacleBordCol = obstBordColor;
-            getColor(obstacleBordCol, node, "bord");
-            border = getBorder(node, obstBorder);               // Read border setting or use obstBorder by default
-            obsBorder = iniShapeBorder(scene, border, shape, pos, obstacleBordCol, node);
-            if(obsBorder) scene->addChild(obsBorder);           //Draw the obstacle's border
+            bordCol = Obstacle::defBordColor;
+            getColor(bordCol, node, "bord");
+            border = getBorder(node, Obstacle::defBorder);      // Read border setting or use obstBorder by default
+            obsBorder = iniShapeBorder(scene, border, shape, pos, bordCol, node);
+            if(obsBorder) scene->addChild(obsBorder);           // Draw the obstacle's border
         }else{
             cout << "Incorrect format: the attribute 'type' of the tag 'obstacle' must exist and be one of these: BOX, PLANE, SPHERE, CYLINDER, UNCAPPED_CYLINDER, CONE, TORUS. Obstacle skipped.\n";
         }
@@ -394,38 +432,40 @@ void DrawScene::drawEnemies(CollisionScene *scene, xml_node<> *ndEnemies){
     if(!ndEnemies) ERROR("Incorrect format: One child of 'geometry' must be 'enemies'");
     ScenePrimitive *scnPrimitive = NULL;
     Enemy *enemy = NULL;
-    Color enemyCol, enemyBordCol;
     Vector3 pos, dir, lookAt;
     Number border;
+    Color color, bordCol;
     int shape = CollisionSceneEntity::SHAPE_BOX;
     xml_node<> *node = ndEnemies->first_node("enemy", 0, false);    // Get the first enemy
     if(!node) ERROR("Incorrect format: The tag 'enemies' must have at least 1 'enemy' child");
     
-    getColor(DrawScene::enemyColor, ndEnemies);                     // Configure parameters by default (values in case not specified)
-    getColor(DrawScene::enemyBordColor, ndEnemies, "bord");
-    DrawScene::enemyBorder = getBorder(ndEnemies, DrawScene::enemyBorder);
+    getColor(Enemy::defColor, ndEnemies);                           // Configure parameters by default (values in case not specified)
+    getColor(Enemy::defBordColor, ndEnemies, "bord");
+    Enemy::defBorder = getBorder(ndEnemies, Enemy::defBorder);
     
     do{
         scnPrimitive = iniPrimitive(shape, node);                   // Initialize the obstacle (create instance of ScenePrimitive)
         if(scnPrimitive){
-            enemyCol = enemyColor;                                  // Default color
+            color = Enemy::defColor;                                // Default color
             pos = Vector3(0, 0, 0);                                 // Default position
-            getColor(enemyCol, node);                               // Get its color
-            getPosition(pos, node);                                 // And position
-            scnPrimitive->setColor(enemyCol);                       // Apply those settings
-            scnPrimitive->setPosition(pos);
-            enemy = new Enemy(scnPrimitive);                        // Create a new enemy and configure its parameters
             dir = Vector3(1, 0, 0);                                 // Default movement direction
-            getMovementDir(dir, node);                              // Get direction of enemy's movement
+            getColor(color, node);                                  // Get its color
+            getPosition(pos, node);                                 // Position
+            getMovementDir(dir, node);                              // And direction of movement
+            lookAt = Vector3(0, 0, 1).crossProduct(dir);
+            if(lookAt.length() > 0) scnPrimitive = iniPrimitive(shape, node, true);
+            scnPrimitive->setColor(color);                          // Apply those settings
+            scnPrimitive->setPosition(pos);
+            scnPrimitive->backfaceCulled = false;
+            enemy = new Enemy(scnPrimitive);                        // Create a new enemy and configure its parameters
             enemy->movementDir = dir;                               // Configure enemy's parameters
             enemy->amplitude = getAmplitude(node, 5);
             enemy->velocity = getVelocity(node, 1);
             enemy->offset = getOffset(node);
-            enemyBordCol = enemyBordColor;
-            getColor(enemyBordCol, node, "bord");
-            border = getBorder(node, enemyBorder);                  // Read border setting or use enemyBorder by default
-            enemy->border = iniShapeBorder(scene, border, shape, pos, enemyBordCol, node);
-            lookAt = Vector3(0, 0, 1).crossProduct(dir);
+            bordCol = Enemy::defBordColor;
+            getColor(bordCol, node, "bord");
+            border = getBorder(node, Enemy::defBorder);             // Read border setting or use enemyBorder by default
+            enemy->border = iniShapeBorder(scene, border, shape, pos, bordCol, node, lookAt.length()>0);
             if(enemy->border){
                 scene->addChild(enemy->border);
                 if(lookAt.length() > 0) enemy->border->lookAt(pos + dir, lookAt);
@@ -446,18 +486,18 @@ void DrawScene::drawCoins(CollisionScene *scene, xml_node<> *ndCoins){
     xml_node<> *node = ndCoins->first_node("coin", 0, false);   // Get the first coin
     if(!node) ERROR("Incorrect format: The tag 'coins' must have at least 1 'coin' child");
     
-    getColor(DrawScene::coinSmColor, ndCoins, "sm");            // Configure parameters by default (values in case not specified)
-    getColor(DrawScene::coinLgColor, ndCoins, "lg");
+    getColor(Coin::colorSm, ndCoins, "sm"); // Configure parameters by default (values in case not specified)
+    getColor(Coin::colorLg, ndCoins, "lg");
     Coin::valueSm = getNumber("ptsSm", ndCoins, Coin::valueSm);
     Coin::valueLg = getNumber("ptsLg", ndCoins, Coin::valueLg);
     Coin::rotationVel = getNumber("rotV", ndCoins, Coin::rotationVel);
     
     do{
-        pos = Vector3(0, 0, 0);         // Default position
-        getPosition(pos, node);         // Get position
+        pos = Vector3(0, 0, 0);             // Default position
+        getPosition(pos, node);             // Get position
         coins->push_back(new Coin(scene, pos, !hasLargeValue(node), getOffset(node)));
-        node = node->next_sibling();    // Get the next coin
-    } while(node);                      // Until there are no more coins
+        node = node->next_sibling();        // Get the next coin
+    } while(node);                          // Until there are no more coins
 }
 
 void DrawScene::drawPlayer(CollisionScene *scene, xml_node<> *ndPlayer){
@@ -466,13 +506,13 @@ void DrawScene::drawPlayer(CollisionScene *scene, xml_node<> *ndPlayer){
     
     if(ndPlayer){
         player = iniPrimitive(shape, ndPlayer); // Initialize the player (create instance of ScenePrimitive)
-        getColor(playerColor, ndPlayer);        // Get its color
-        getColor(playerDeadColor, ndPlayer, "dead");
+        getColor(Player::defColor, ndPlayer);   // Get its color
+        getColor(Player::deadColor, ndPlayer, "dead");
         getPosition(pos, ndPlayer);             // And position
     }
     if(!player) player = new ScenePrimitive(DEF_PLAY_TYPE, DEF_PLAY_SIZE);
     
-    player->setColor(playerColor);              // Apply those settings
+    player->setColor(Player::defColor);         // Apply those settings
     player->setPosition(pos);
     scene->addCollisionChild(player, shape);    // Add the player to the scene
 }
@@ -484,18 +524,22 @@ void DrawScene::setupScene(CollisionScene *scene, xml_node<> *ndScene){
     if(!ndScene) return;                                                        // This node is optional. Exit if not present
     
     node = ndScene->first_node("sound", 0, false);                              // Get the tag 'sound'
-    backgndMusicEn = (getNumber("enbl", node, backgndMusicEn) == 1);            // Enable background music if attribute 'enbl' is 1
+    if(node){
+        backgndMusicEn = isAttributeTrue("enbl", node, backgndMusicEn);         // Enable background music if attribute 'enbl' is 1
+    }
     
     node = ndScene->first_node("camera", 0, false);                             // Get the tag 'camera'
-    iniCamRad = getNumber("rad", node, iniCamRad);                              // Configure camera's radius (spherical coords)
-    iniCamRot = getNumber("rot", node, iniCamRot, false)*PI/180;                // Configure camera's initial rotation
-    iniCamElev = getNumber("elev", node, iniCamElev)*PI/180;                    // Configure camera's initial elevation
-    if(iniCamRad < CAM_MIN_RADIUS) iniCamRad = CAM_MIN_RADIUS;                  // Establish a minimum radius for the camera
-    if(iniCamElev < 0) iniCamElev = 0;
-    if(iniCamElev > CAM_MAX_ELEV) iniCamElev = CAM_MAX_ELEV;
+    if(node){
+        iniCamRad = getNumber("rad", node, iniCamRad);                          // Configure camera's radius (spherical coords)
+        iniCamRot = getNumber("rot", node, iniCamRot*180/PI, false)*PI/180;     // Configure camera's initial rotation
+        iniCamElev = getNumber("elev", node, iniCamElev*180/PI)*PI/180;         // Configure camera's initial elevation
+        if(iniCamRad < CAM_MIN_RADIUS) iniCamRad = CAM_MIN_RADIUS;              // Establish a minimum radius for the camera
+        if(iniCamElev < 0) iniCamElev = 0;
+        if(iniCamElev > CAM_MAX_ELEV) iniCamElev = CAM_MAX_ELEV;
+    }
     
     node = ndScene->first_node("fog", 0, false);                                // Get the tag 'fog'
-    if(getNumber("enbl", node) == 1){
+    if(node && getNumber("enbl", node)==1){
         scene->enableFog(true);                                                 // A bit of (blue) foggy effect to simulate water
         scene->setFogProperties(Renderer::FOG_EXP2, DEF_FOG_COLOR, getNumber("dens", node, DEF_FOG_DENS), -1000, 3000);
     }else{
@@ -503,7 +547,7 @@ void DrawScene::setupScene(CollisionScene *scene, xml_node<> *ndScene){
     }
 }
 
-void DrawScene::drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<ScenePrimitive*>& wlls, deque<ScenePrimitive*>& obstcls, deque<Enemy*>& enms, deque<Coin*>& cns, const char *strFile){
+void DrawScene::drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<Wall*>& wlls, deque<ScenePrimitive*>& obstcls, deque<Enemy*>& enms, deque<Coin*>& cns, const char *strFile){
     if(!fileExists(strFile)) ERROR("Error: File not found (" << strFile << ")");
     file<> file(strFile);                                               // Open the xml file after making sure it exists
     xml_document<> doc;

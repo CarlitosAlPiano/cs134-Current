@@ -15,11 +15,33 @@ using namespace Polycode;
 using namespace rapidxml;
 using namespace std;
 
+class Wall {
+public:
+    ScenePrimitive *wall;
+    Vector2 start, end;
+    static Number defBorder, width, height;
+    static Color defColor, defBordColor;
+    
+    Wall(CollisionScene *scene, Vector3 lastVertex, Vector3 newVertex, Number border, Color color, Color bordColor);
+    
+    void drawWallBorder(CollisionScene *scene, Number border, Color borderCol);
+    Vector2 getSegment();
+    bool intersects(const Vector2& l, Vector2& pt);
+};
+
+class Obstacle {
+public:
+    static Number defBorder;
+    static Color defColor, defBordColor;
+};
+
 class Enemy {
 public:
     ScenePrimitive *enemy, *border;
     Number amplitude, velocity, offset;
     Vector3 movementDir, middlePos;
+    static Number defBorder;
+    static Color defColor, defBordColor;
     
     Enemy(ScenePrimitive *enemy, Number amplitude = 3, Number velocity = 1, Number offset = PI/2, Vector3 movementDir = Vector3(1, 0, 0));
     Enemy(ScenePrimitive *enemy, Vector3 middlePos, Number amplitude = 3, Number velocity = 1, Number offset = PI/2, Vector3 movementDir = Vector3(1, 0, 0));
@@ -35,6 +57,7 @@ public:
     static unsigned int valueSm, valueLg;
     static Number rotationVel;
     static Sound *sndCatch;
+    static Color colorSm, colorLg;
     
     Coin(CollisionScene *scene, Vector3 pos, bool hasSmallValue = true, Number offset = 0);
 
@@ -42,9 +65,14 @@ public:
     void update(Number totalElapsed);
 };
 
+class Player {
+public:
+    static Color defColor, deadColor;
+};
+
 class DrawScene {
 private:
-    static deque<ScenePrimitive*> *walls;
+    static deque<Wall*> *walls;
     static deque<ScenePrimitive*> *obstacles;
     static deque<Enemy*> *enemies;
     static deque<Coin*> *coins;
@@ -65,11 +93,12 @@ private:
     static Number getAmplitude(xml_node<> *node, Number defValue = 0.0);
     static Number getVelocity(xml_node<> *node, Number defValue = 0.0);
     static Number getOffset(xml_node<> *node, Number defValue = 0.0);
+    static bool isAttributeTrue(const char* attrName, xml_node<> *node, bool defValue = false);
     static bool hasLargeValue(xml_node<> *node);
     static bool isTransparent(xml_node<> *node);
-    static ScenePrimitive* iniPrimitive(int& shape, xml_node<> *node, Number numSegments = 30);
-    static ScenePrimitive* iniShapeBorder(CollisionScene *scene, Number border, int shape, Vector3 pos, Color col, xml_node<> *node);
-    static void drawWallBorder(CollisionScene *scene, Vector3 lastVertex, Vector3 newVertex, xml_node<> *node);
+    static bool isGoal(xml_node<> *node);
+    static ScenePrimitive* iniPrimitive(int& shape, xml_node<> *node, bool boxReversed = false, Number numSegments = 30);
+    static ScenePrimitive* iniShapeBorder(CollisionScene *scene, Number border, int shape, Vector3 pos, Color col, xml_node<> *node, bool boxReversed = false);
     static void drawWalls(CollisionScene *scene, xml_node<> *ndWalls);
     static void drawObstacles(CollisionScene *scene, xml_node<> *ndObstactles);
     static void drawEnemies(CollisionScene *scene, xml_node<> *ndEnemies);
@@ -79,15 +108,8 @@ private:
 public:
     static bool backgndMusicEn;
     static Number iniCamRad, iniCamRot, iniCamElev;
-    static Number wallWidth, wallHeight;
-    static Number wallBorder, obstBorder, enemyBorder;
-    static Color wallColor, wallBordColor;
-    static Color obstColor, obstBordColor;
-    static Color enemyColor, enemyBordColor;
-    static Color coinSmColor, coinLgColor;
-    static Color playerColor, playerDeadColor;
 
-    static void drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<ScenePrimitive*>& wlls, deque<ScenePrimitive*>& obstcls, deque<Enemy*>& enemies, deque<Coin*>& coins, const char *strFile);
+    static void drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<Wall*>& wlls, deque<ScenePrimitive*>& obstcls, deque<Enemy*>& enemies, deque<Coin*>& coins, const char *strFile);
 };
 
 #endif
