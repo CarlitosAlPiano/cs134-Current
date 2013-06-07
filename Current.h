@@ -20,12 +20,15 @@ private:
     Number camRad, camElev, camRot;
     bool mouse_clicked;
     bool left_pressed, right_pressed;
-    bool further_pressed, closer_pressed;
     bool up_pressed, down_pressed;
+    bool further_pressed, closer_pressed;
+    bool further_locked, closer_locked;
+    enum {HOME, RET_FROM_FRONT, RET_FROM_BACK} stateHome;
+    Timer *tmrBackHome, *tmrForceHome;
 
     CollisionScene *scene;
     Sound *bgndMusic;
-    SceneLine *lRiverWidth;
+    SceneLine *lRiverWidth, *lHome;
     deque<Wall*> walls;
     deque<ScenePrimitive*> obstacles;
     deque<Enemy*> enemies;
@@ -36,10 +39,12 @@ private:
     Number totalElapsed, lastCollision;
     unsigned int points;
     
+    void startTimers();
     void playerSubtractHealth(Number healthSub = 0.0, bool checkLastCollision = true);
-    void recomputePlayerVeloc();
     bool checkPlayerCollision(ScenePrimitive *obstacle);
     void computeRiverWidth();
+    void recomputePlayerVeloc();
+    void keepPlayerHome();
     void keepPlayerWithinBB();
 
 public:

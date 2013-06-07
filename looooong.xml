@@ -1,0 +1,26 @@
+<geometry>
+    <scene>
+        <sound enbl="1" />
+        <camera elev="20" rot="-100" />
+        <fog enbl="1" dens="0.02" />
+    </scene>
+    <walls>
+        <vertex x="10" z="0" />
+        <vertex x="10" z="1000" />
+        <vertex x="-10" z="1000" goal="1" />
+        <vertex x="-10" z="0" />
+    </walls>
+    <obstacles>
+        <obstacle type="" />
+    </obstacles>
+    <enemies>
+        <enemy type="" />
+    </enemies>
+    <coins ptsSm="1" ptsLg="3" rotV="75">
+        <coin x="-1" y="9" z="15" lrg="1" />
+        <coin x="-5" y="8.9" z="15" />
+        <coin x="0" y="5" z="35" />
+        <coin x="8" y="1" z="70" />
+        <coin x="0" y="8.9" z="115" lrg="1" />
+    </coins>
+</geometry>

@@ -2,17 +2,21 @@
 
 #define PLYR_INI_HEALTH 100.0
 #define VEL_PLAYER_INC  0.15
-#define SPEED_FACTOR    50
-#define CAM_VEL_Z       (SPEED_FACTOR/pow(riverWidth,2))
+#define VEL_RET_HOME    0.1
+#define SPEED_FACTOR    30
+#define CAM_VEL_Z       (SPEED_FACTOR/(riverWidth*Wall::height))
 #define CAM_INC_ROT     0.03
 #define CAM_INC_ELEV    0.03
 #define CAM_MAX_ELEV    PI/2 - 0.01
-#define BB_HALF_DEPTH   8
+#define BB_HALF_DEPTH   6
 #define BB_FRTH_LIMIT   (currentZ + BB_HALF_DEPTH)
 #define BB_CLSR_LIMIT   (currentZ - BB_HALF_DEPTH)
 #define BB_TOP_LIMIT    (Wall::height - playerRad)
 #define BB_BTM_LIMIT    playerRad
 #define TIME_BTWN_COLL  0.5
+#define SHOW_WIDTH_LINE true
+#define SHOW_HOME_LINE  true
+#define TIME_RETRN_HOME 500
 
 Current::Current(PolycodeView *view) {
 	core = new POLYCODE_CORE(view, 640,480,false,false,0,0,90);
@@ -20,8 +24,12 @@ Current::Current(PolycodeView *view) {
     
 	scene = new CollisionScene();
     lRiverWidth = new SceneLine(Vector3(), Vector3());
-    scene->addChild(lRiverWidth);
-    DrawScene::drawScene(scene, player, walls, obstacles, enemies, coins, "geometry.xml");
+    lRiverWidth->setColor(0.0, 1.0, 0.0, 1.0);
+    if(SHOW_WIDTH_LINE) scene->addChild(lRiverWidth);
+    lHome = new SceneLine(Vector3(), Vector3());
+    lHome->setColor(1.0, 0.0, 0.0, 1.0);
+    if(SHOW_HOME_LINE) scene->addChild(lHome);
+    DrawScene::drawScene(scene, player, walls, obstacles, enemies, coins, "looooong.xml");//"geometry.xml");
     computeRiverWidth();
     
     camRad = DrawScene::iniCamRad;
@@ -30,10 +38,18 @@ Current::Current(PolycodeView *view) {
 	mouse_clicked = false;
 	left_pressed = false;
 	right_pressed = false;
-	further_pressed = false;
-	closer_pressed = false;
     up_pressed = false;
     down_pressed = false;
+	further_pressed = false;
+	closer_pressed = false;
+    further_locked = false;
+    closer_locked = false;
+    stateHome = HOME;
+    tmrBackHome = new Timer(true, TIME_RETRN_HOME);
+    tmrBackHome->Pause(true);
+    tmrBackHome->addEventListener(this, Timer::EVENT_TRIGGER);
+    tmrForceHome = new Timer(false, 10000);
+    tmrForceHome->Pause(true);
     playerVeloc = Vector3(0, 0, CAM_VEL_Z);
     playerRad = player->getMesh()->getRadius();
     currentZ = player->getPosition().z;
@@ -55,6 +71,17 @@ Current::Current(PolycodeView *view) {
 
 Current::~Current() {}
 
+void Current::startTimers(){
+    if(tmrBackHome->isPaused()){
+        tmrBackHome->Reset();
+        tmrBackHome->Pause(false);
+        if(tmrForceHome->isPaused()){
+            tmrForceHome->Reset();
+            tmrForceHome->Pause(false);
+        }
+    }
+}
+
 void Current::playerSubtractHealth(Number healthSub, bool checkLastCollision){
     Number t;
 
@@ -71,30 +98,6 @@ void Current::playerSubtractHealth(Number healthSub, bool checkLastCollision){
         }
         t = playerHealth/PLYR_INI_HEALTH;
         player->color = Player::defColor*t + Player::deadColor*(1-t);
-    }
-}
-
-void Current::recomputePlayerVeloc() {
-    if(left_pressed == right_pressed){
-        playerVeloc.x = 0;
-    }else if(left_pressed){
-        playerVeloc.x = VEL_PLAYER_INC;
-    }else{
-        playerVeloc.x = -VEL_PLAYER_INC;
-    }
-    if(up_pressed == down_pressed){
-        playerVeloc.y = 0;
-    }else if(up_pressed){
-        playerVeloc.y = VEL_PLAYER_INC;
-    }else{
-        playerVeloc.y = -VEL_PLAYER_INC;
-    }
-    if(further_pressed == closer_pressed){
-        playerVeloc.z = CAM_VEL_Z;
-    }else if(further_pressed){
-        playerVeloc.z = VEL_PLAYER_INC + CAM_VEL_Z;
-    }else{
-        playerVeloc.z =-VEL_PLAYER_INC;
     }
 }
 
@@ -142,6 +145,8 @@ void Current::computeRiverWidth(){
             riverWidth = lastPt.distance(q.top());      // In that case, width = distance{last point, current point}
             lRiverWidth->setStart(Vector3(lastPt.x, playerPos3.y, lastPt.y));
             lRiverWidth->setEnd(Vector3(q.top().x, playerPos3.y, q.top().y));
+            lHome->setStart(Vector3(lastPt.x, playerPos3.y, currentZ));
+            lHome->setEnd(Vector3(q.top().x, playerPos3.y, currentZ));
             return;
         }
         lastPt = q.top();
@@ -150,15 +155,88 @@ void Current::computeRiverWidth(){
     playerSubtractHealth(PLYR_INI_HEALTH, false);       // This should never happen either. Kill player (it's even further away than last wall, sorted by "x" coord!)
 }
 
+void Current::recomputePlayerVeloc() {
+    if(left_pressed == right_pressed){
+        playerVeloc.x = 0;
+    }else if(left_pressed){
+        playerVeloc.x = VEL_PLAYER_INC;
+    }else{
+        playerVeloc.x = -VEL_PLAYER_INC;
+    }
+    if(up_pressed == down_pressed){
+        playerVeloc.y = 0;
+    }else if(up_pressed){
+        playerVeloc.y = VEL_PLAYER_INC;
+    }else{
+        playerVeloc.y = -VEL_PLAYER_INC;
+    }
+    if(further_pressed == closer_pressed){
+        playerVeloc.z = CAM_VEL_Z + VEL_RET_HOME*(stateHome==RET_FROM_BACK) - VEL_RET_HOME*(stateHome==RET_FROM_FRONT);
+    }else if(further_pressed){
+        playerVeloc.z = VEL_PLAYER_INC + CAM_VEL_Z - VEL_RET_HOME*tmrForceHome->getElapsedf()*(stateHome==RET_FROM_FRONT);
+    }else{
+        playerVeloc.z =-VEL_PLAYER_INC + CAM_VEL_Z + VEL_RET_HOME*tmrForceHome->getElapsedf()*(stateHome==RET_FROM_BACK);
+    }
+}
+
+void Current::keepPlayerHome(){
+    Number z = player->getPosition().z;
+    
+    if(z > BB_FRTH_LIMIT){
+        player->setPositionZ(BB_FRTH_LIMIT);
+        startTimers();
+    }else if(z > currentZ){
+        switch(stateHome) {
+            case HOME:
+                if(further_pressed == closer_pressed){
+                    startTimers();
+                }
+                break;
+            case RET_FROM_BACK:
+                stateHome = HOME;
+                player->setPositionZ(currentZ);
+                tmrBackHome->Pause(true);
+                tmrForceHome->Pause(true);
+                if(closer_pressed){
+                    closer_locked = true;
+                    closer_pressed = false;
+                }
+            case RET_FROM_FRONT:
+            default:
+                recomputePlayerVeloc();
+                break;
+        }
+    }else if(z < BB_CLSR_LIMIT){
+        player->setPositionZ(BB_CLSR_LIMIT);
+        startTimers();
+    }else if(z < currentZ){
+        switch(stateHome) {
+            case HOME:
+                if(further_pressed == closer_pressed){
+                    startTimers();
+                }
+                break;
+            case RET_FROM_FRONT:
+                stateHome = HOME;
+                player->setPositionZ(currentZ);
+                tmrBackHome->Pause(true);
+                tmrForceHome->Pause(true);
+                if(further_pressed){
+                    further_locked = true;
+                    further_pressed = false;
+                }
+            case RET_FROM_BACK:
+            default:
+                recomputePlayerVeloc();
+        }
+    }
+}
+
 void Current::keepPlayerWithinBB(){
     Vector3 pos = player->getPosition();
     
     currentZ += CAM_VEL_Z;
-    if(pos.z > BB_FRTH_LIMIT){
-        player->setPositionZ(BB_FRTH_LIMIT);
-    }else if(pos.z < BB_CLSR_LIMIT){
-        player->setPositionZ(BB_CLSR_LIMIT);
-    }
+    keepPlayerHome();
     if(pos.y > BB_TOP_LIMIT){
         player->setPositionY(BB_TOP_LIMIT);
     }else if(pos.y <  BB_BTM_LIMIT){
@@ -209,18 +287,18 @@ void Current::handleEvent(Event *e) {
                         right_pressed = true;
                         break;
                     case KEY_UP:
-                        further_pressed = true;
+                        up_pressed = true;
                         break;
                     case KEY_DOWN:
-                        closer_pressed = true;
+                        down_pressed = true;
                         break;
                     case 'w':
                     case 'W':
-                        up_pressed = true;
+                        if(!further_locked) further_pressed = true;
                         break;
                     case 's':
                     case 'S':
-                        down_pressed = true;
+                        if(!closer_locked) closer_pressed = true;
                         break;
                     case KEY_ESCAPE:
                         core->paused = !core->paused;
@@ -243,22 +321,33 @@ void Current::handleEvent(Event *e) {
                         right_pressed = false;
                         break;
                     case KEY_UP:
-                        further_pressed = false;
+                        up_pressed = false;
                         break;
                     case KEY_DOWN:
-                        closer_pressed = false;
+                        down_pressed = false;
                         break;
                     case 'w':
                     case 'W':
-                        up_pressed = false;
+                        further_pressed = false;
+                        further_locked = false;
                         break;
                     case 's':
                     case 'S':
-                        down_pressed = false;
+                        closer_pressed = false;
+                        closer_locked = false;
                         break;
                 }
                 recomputePlayerVeloc();
                 break;
+        }
+    }else if(e->getDispatcher()==tmrBackHome && e->getEventCode()==Timer::EVENT_TRIGGER){
+        tmrBackHome->Pause(true);
+        if(player->getPosition().z < currentZ){
+            stateHome = RET_FROM_BACK;
+            recomputePlayerVeloc();
+        }else if(player->getPosition().z > currentZ){
+            stateHome = RET_FROM_FRONT;
+            recomputePlayerVeloc();
         }
     }
 }
