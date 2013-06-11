@@ -1,6 +1,5 @@
 #include "Level.h"
 
-#define PLYR_INI_HEALTH 100.0
 #define VEL_PLAYER_INC  0.15
 #define VEL_RET_HOME    0.1
 #define SPEED_FACTOR    40
@@ -22,7 +21,7 @@
 #define TIME_RETRN_HOME 500
 #define TIME_FORCE_HOME 10000
 
-Level::Level(Core *core, MainMenuItem *mainMenu, string& geometryFile) : core(core), mainMenu(mainMenu) {
+Level::Level(Core *core, Hud *hud, MainMenuItem *mainMenu, string& geometryFile) : core(core), hud(hud), mainMenu(mainMenu) {
     loadLevel(geometryFile);
 }
 
@@ -44,13 +43,17 @@ Level::~Level() {
         coins.pop_front();
     }
     player->~ScenePrimitive();
-    bgndMusic->~Sound();
+    if(bgndMusic) bgndMusic->~Sound();
+    tmrBackHome->removeAllHandlers();
+    tmrBackHome->~Timer();
+    tmrForceHome->removeAllHandlers();
+    tmrForceHome->~Timer();
     scene->ownsChildren = true;
     scene->~CollisionScene();
     core->getInput()->removeAllHandlersForListener(this);
 }
 
-void Level::loadLevel(string& geometryFile){
+void Level::loadLevel(string& geometryFile) {
     scene = new CollisionScene();
     lRiverWidth = new SceneLine(Vector3(), Vector3());
     lRiverWidth->setColor(0.0, 1.0, 0.0, 1.0);
@@ -72,7 +75,6 @@ void Level::loadLevel(string& geometryFile){
     camRad = DrawScene::iniCamRad;
 	camRot = DrawScene::iniCamRot;
 	camElev = DrawScene::iniCamElev;
-    dead = false;
 	mouse_clicked = false;
 	left_pressed = false;
 	right_pressed = false;
@@ -93,8 +95,6 @@ void Level::loadLevel(string& geometryFile){
     currentZ = player->getPosition().z - CAM_VEL_Z;
     totalElapsed = 0;
     lastCollision = 0;
-    playerHealth = PLYR_INI_HEALTH;
-    points = 0;
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEMOVE);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEDOWN);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEUP);
@@ -126,14 +126,12 @@ void Level::playerSubtractHealth(Number healthSub, bool checkLastCollision){
     if(totalElapsed-lastCollision>TIME_BTWN_COLL || !checkLastCollision){
         if(checkLastCollision) lastCollision = totalElapsed;    // Keep track of the last time a collision took place
         if(healthSub <= 0) healthSub = 10 + (random()%10);      // Reduce health by 10~20 by default
-        playerHealth -= healthSub;
-        cout << "Health: " << playerHealth << " (subtracted " << healthSub << ")\n";
-        if(playerHealth <= 0){
-            dead = true;
+        hud->decHealth(healthSub);
+        if(hud->isDead()){
             mainMenu->exitLevel(Level::EXIT_DIED);
             return;
         }
-        t = playerHealth/PLYR_INI_HEALTH;
+        t = hud->getHealth()/hud->maxHealth;
         player->color = Player::defColor*t + Player::deadColor*(1-t);
     }
 }
@@ -174,7 +172,7 @@ void Level::computeRiverWidth(){
     }
     
     if(q.empty() || playerPos.x < q.top().x){           // Is player even further away than 1st wall (sorted by "x" coord)?
-        playerSubtractHealth(PLYR_INI_HEALTH, false);   // This should never happen. Kill player
+        playerSubtractHealth(hud->maxHealth, false);    // This should never happen. Kill player
         return;
     }
     while(!q.empty()){
@@ -189,7 +187,7 @@ void Level::computeRiverWidth(){
         lastPt = q.top();
         q.pop();                                        // If point wasn't the one I'm looking for, delete it
     }
-    playerSubtractHealth(PLYR_INI_HEALTH, false);       // This should never happen either. Kill player (it's even further away than last wall, sorted by "x" coord!)
+    playerSubtractHealth(hud->maxHealth, false);        // This should never happen either. Kill player (it's even further away than last wall, sorted by "x" coord!)
 }
 
 void Level::recomputePlayerVeloc() {
@@ -405,7 +403,7 @@ bool Level::Update() {
     totalElapsed += elapsed;
     
     computeRiverWidth();
-    if(dead) return core->updateAndRender();
+    if(hud->isDead()) return core->updateAndRender();
     keepPlayerWithinBB();
 	scene->getDefaultCamera()->setPositionX(camRad*cos(camElev)*cos(camRot));
     scene->getDefaultCamera()->setPositionY(camRad*sin(camElev) + Wall::height);
@@ -420,19 +418,21 @@ bool Level::Update() {
         if(coins.at(i)->coin->visible){
             coins.at(i)->update(totalElapsed);
             CollisionResult res = scene->testCollision(player, coins.at(i)->coin);
-            if(res.collided) coins.at(i)->catchCoin(points);
+            if(res.collided) hud->incPoints(coins.at(i)->catchCoin());
         }
     }
     for(size_t i=0; i<enemies.size(); i++){         // ENEMIES
         enemies.at(i)->update(totalElapsed);
         if(checkPlayerCollision(enemies.at(i)->enemy)){
             playerSubtractHealth();
+            if(hud->isDead()) return core->updateAndRender();
         }
     }
     for(size_t i=0; i<obstacles.size(); i++){       // OBSTACLES
         obstacles.at(i)->update(totalElapsed);
         if(checkPlayerCollision(obstacles.at(i)->obstacle)){
             playerSubtractHealth();
+            if(hud->isDead()) return core->updateAndRender();
         }
     }
     for(size_t i=1; i<walls.size(); i++){           // WALLS

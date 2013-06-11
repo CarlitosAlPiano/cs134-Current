@@ -5,6 +5,7 @@
 #include "MainMenu.h"           // Reference to main menu (notify when level is finished)
 #include <queue>                // Priority queues
 
+class Hud;
 class MainMenuItem;
 
 class CompareVector2 {
@@ -17,10 +18,11 @@ public:
 class Level : public EventHandler {
 private:
     Core *core;
+    Hud *hud;
     MainMenuItem *mainMenu;
     
     Number camRad, camElev, camRot;
-    bool dead, mouse_clicked;
+    bool mouse_clicked;
     bool left_pressed, right_pressed;
     bool up_pressed, down_pressed;
     bool further_pressed, closer_pressed;
@@ -37,9 +39,8 @@ private:
     deque<Coin*> coins;
     ScenePrimitive *player;
     Vector3 playerVeloc;
-    Number playerRad, currentZ, riverWidth, playerHealth;
+    Number playerRad, currentZ, riverWidth;
     Number totalElapsed, lastCollision;
-    unsigned int points;
     
     void loadLevel(string& geometryFile);
     void startTimers();
@@ -54,7 +55,7 @@ public:
     static const int EXIT_DIED = 0;
     static const int EXIT_SURVIVED = 1;
 
-    Level(Core *core, MainMenuItem *mainMenu, string& geometryFile);
+    Level(Core *core, Hud *hud, MainMenuItem *mainMenu, string& geometryFile);
     ~Level();
     void handleEvent(Event *e);
     bool Update();

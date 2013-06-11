@@ -32,7 +32,7 @@
 #define DEF_PL_DEAD_COL Color(1.0, 0.0, 0.0, 1.0)
 
 Number Wall::width = DEF_WALL_WIDTH, Wall::height = DEF_WALL_HEIGHT;
-unsigned int Coin::valueSm = 1, Coin::valueLg = 3;
+int Coin::valueSm = 1, Coin::valueLg = 3;
 Number Coin::rotationVel = 50;
 Sound *Coin::sndCatch = NULL;
 deque<Wall*>* DrawScene::walls = NULL;
@@ -154,11 +154,10 @@ Coin::~Coin(){
     coin->~ScenePrimitive();
 }
 
-void Coin::catchCoin(unsigned int &points){
+int Coin::catchCoin(){
     coin->visible = false;
-    points += (hasSmallValue)? valueSm:valueLg;
-    cout << "Points: " << points << "\n";
     sndCatch->Play();
+    return (hasSmallValue)? valueSm:valueLg;
 }
 
 void Coin::update(Number totalElapsed){
@@ -605,10 +604,8 @@ void DrawScene::drawPlayer(CollisionScene *scene, xml_node<> *ndPlayer){
 }
 
 void DrawScene::setupScene(CollisionScene *scene, xml_node<> *ndScene){
-    xml_node<> *node;
-    
-    CoreServices::getInstance()->getRenderer()->setClippingPlanes(0.1, 5000);   // Set far plane very far: avoid weird visual effects!
     if(!ndScene) return;                                                        // This node is optional. Exit if not present
+    xml_node<> *node;
     
     node = ndScene->first_node("sound", 0, false);                              // Get the tag 'sound'
     if(node){

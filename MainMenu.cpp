@@ -1,15 +1,172 @@
 #include "MainMenu.h"
 
+int Hud::points = 0, Hud::livesLeft = 2;
+Number Hud::maxHealth = 100.0, Hud::health = maxHealth;
 const int MainMenuItem::ITEM_EXIT = 0;
 
-MainMenuItem::MainMenuItem(Core *core, MainMenu* menu, int numLevel, bool locked) : core(core), menu(menu), numLevel(numLevel), locked(locked), level(NULL), image(NULL), imageBorder(NULL) {
+Hud::Hud(Core *core, Vector2 imgCoinSize, Vector2 imgHealthSize, Vector2 healthBarSize, Vector2 margin, Number healthBarBorderW, Number blinkThresh, Number blinkPeriod, Color colLblLivesLeft, Color colLblPoints, Color colMaxHealth, Color colMinHealth, Color colBordMaxHealth, Color colBordMinHealth) : core(core), imgCoinSize(imgCoinSize), imgHealthSize(imgHealthSize), healthBarSize(healthBarSize), margin(margin), healthBarBorderW(healthBarBorderW), blinkThresh(blinkThresh), blinkPeriod(blinkPeriod), colLblLivesLeft(colLblLivesLeft), colLblPoints(colLblPoints), colMaxHealth(colMaxHealth), colMinHealth(colMinHealth), colBordMaxHealth(colBordMaxHealth), colBordMinHealth(colBordMinHealth), tmrBlink(NULL) {
+    loadHud();
+}
+
+Hud::~Hud(){
+    unloadHud();
+}
+
+void Hud::loadHud(){
+    hud = new Screen();
+    imgHealth = new ScreenImage("HUD_health.png");
+    imgHealth->setPositionMode(ScreenEntity::POSITION_TOPLEFT);
+    imgHealth->setPosition(margin.x, margin.y+6);
+    imgHealth->setShapeSize(imgHealthSize.x, imgHealthSize.y);
+    healthBar = new ScreenShape(ScreenShape::SHAPE_RECT, healthBarSize.x, healthBarSize.y);
+    healthBar->setPositionMode(ScreenEntity::POSITION_TOPLEFT);
+    healthBar->setPosition(imgHealth->getPosition2D() + Vector2(imgHealthSize.x+margin.x, (imgHealthSize.y-healthBarSize.y)/2));
+    healthBarBorder = new ScreenShape(ScreenShape::SHAPE_RECT, healthBarSize.x, healthBarSize.y);
+    healthBarBorder->setPositionMode(ScreenEntity::POSITION_TOPLEFT);
+    healthBarBorder->setPosition(healthBar->getPosition2D());
+    healthBarBorder->lineWidth = 2;
+    healthBarBorder->renderWireframe = true;
+    lblLivesLeft = new ScreenLabel("", 26);
+    lblLivesLeft->setPosition(healthBar->getPosition2D().x+healthBarSize.x+margin.x, margin.y);
+    lblLivesLeft->setColor(colLblLivesLeft);
+    lblPoints = new ScreenLabel("999", 26);
+    lblPoints->setPositionY(margin.y);
+    lblPoints->setColor(colLblPoints);
+    imgCoin = new ScreenImage("HUD_coin.png");
+    imgCoin->setPositionMode(ScreenEntity::POSITION_TOPLEFT);
+    imgCoin->setPosition(core->getXRes()-2*margin.x-lblPoints->getWidth()-imgCoinSize.x, margin.y+5);
+    imgCoin->setShapeSize(imgCoinSize.x, imgCoinSize.y);
+    setPoints(points);
+    restoreHealth();
+    setLivesLeft(livesLeft);
+    hud->addChild(imgHealth);
+    hud->addChild(healthBar);
+    hud->addChild(healthBarBorder);
+    hud->addChild(lblLivesLeft);
+    hud->addChild(imgCoin);
+    hud->addChild(lblPoints);
+}
+
+void Hud::unloadHud(){
+    imgHealth->~ScreenImage();
+    imgCoin->~ScreenImage();
+    healthBar->~ScreenShape();
+    healthBarBorder->~ScreenShape();
+    lblLivesLeft->~ScreenLabel();
+    lblPoints->~ScreenLabel();
+    if(tmrBlink){
+        tmrBlink->removeAllHandlers();
+        tmrBlink->~Timer();
+        tmrBlink = NULL;
+    }
+    hud->~Screen();
+    hud = NULL;
+}
+
+void Hud::updateTextWithNum(ScreenLabel*lbl, int num){
+    stringstream ss;
+    
+    ss << num;
+    lbl->setText(ss.str());
+}
+
+int Hud::getPoints(){
+    return points;
+}
+
+int Hud::getLivesLeft(){
+    return livesLeft;
+}
+
+Number Hud::getHealth(){
+    return health;
+}
+
+bool Hud::isDead(){
+    return (health <= 0.0);
+}
+
+bool Hud::isGameOver(){
+    return (livesLeft < 0);
+}
+
+void Hud::setPoints(int pts){
+    static Number posX = core->getXRes()-margin.x;
+    
+    points = pts;
+    updateTextWithNum(lblPoints, pts);
+    lblPoints->setPositionX(posX-lblPoints->getWidth());
+}
+
+void Hud::setLivesLeft(int lives){
+    livesLeft = lives;
+    if(livesLeft <= 0){
+        lblLivesLeft->setText((livesLeft == 0)? "Last life!":"Game over!!");
+        lblLivesLeft->setColor(colMinHealth);
+    }else{
+        updateTextWithNum(lblLivesLeft, lives);
+        lblLivesLeft->setColor(colLblLivesLeft);
+    }
+}
+
+void Hud::setHealth(Number healthPts){
+    Number t;
+    
+    health = max(min(healthPts, maxHealth), -0.1);
+    t = health/maxHealth;
+    healthBar->setShapeSize(t*healthBarSize.x, healthBarSize.y);
+    healthBar->setColor(colMaxHealth*t + colMinHealth*(1-t));
+    healthBarBorder->setColor(colBordMaxHealth*t + colBordMinHealth*(1-t));
+    if(t<blinkThresh && !tmrBlink){
+        tmrBlink = new Timer(true, blinkPeriod);
+        tmrBlink->addEventListener(this, Timer::EVENT_TRIGGER);
+    }
+}
+
+void Hud::incPoints(int inc){
+    setPoints(points+inc);
+}
+
+void Hud::decPoints(int dec){
+    setPoints(points-dec);
+}
+
+void Hud::incLivesLeft(int inc){
+    setLivesLeft(livesLeft+inc);
+}
+
+void Hud::decLivesLeft(int dec){
+    setLivesLeft(livesLeft-dec);
+}
+
+void Hud::restoreHealth(){
+    setHealth(maxHealth);
+    healthBar->visible = true;
+    if(tmrBlink){
+        tmrBlink->removeAllHandlers();
+        tmrBlink->~Timer();
+        tmrBlink = NULL;
+    }
+}
+
+void Hud::decHealth(int dec){
+    setHealth(health-dec);
+}
+
+void Hud::handleEvent(Event *e){
+    if(e->getDispatcher()==tmrBlink && e->getEventCode()==Timer::EVENT_TRIGGER){
+        healthBar->visible = !healthBar->visible;
+    }
+}
+
+MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, bool locked) : core(core), hud(hud), menu(menu), numLevel(numLevel), locked(locked), level(NULL), image(NULL), imageBorder(NULL) {
     stringstream ss;
     ss << numLevel;
     
     iniItem("Level " + ss.str() + ".xml", "Level " + ss.str() + ".png");
 }
 
-MainMenuItem::MainMenuItem(Core *core, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool locked) : core(core), menu(menu), numLevel(numLevel), locked(locked), level(NULL), image(NULL), imageBorder(NULL) {
+MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool locked) : core(core), menu(menu), numLevel(numLevel), locked(locked), level(NULL), image(NULL), imageBorder(NULL) {
     iniItem(geometryFile, imageFile);
 }
 
@@ -47,43 +204,44 @@ void MainMenuItem::loadLevel(){
     if(numLevel == ITEM_EXIT){
         exit(EXIT_SUCCESS);
     }else{
-        level = new Level(core, this, geometryFile);
+        level = new Level(core, hud, this, geometryFile);
     }
 }
 
 void MainMenuItem::exitLevel(int code){
-    level->~Level();
+    if(level) level->~Level();
     level = NULL;
     menu->loadMenu();
+    hud->restoreHealth();
     switch(code) {
         case Level::EXIT_SURVIVED:
             menu->unlockNextLevel(numLevel);
             break;
         case Level::EXIT_DIED:
         default:
-            // One life less
-            // If no more lifes, game over!!
+            hud->decLivesLeft(1);
+            if(hud->isGameOver()) menu->lockAll();
             break;
     }
 }
 
 bool MainMenuItem::Update(){
-    if(level) return level->Update();
-    return true;
+    return level->Update();
 }
 
-MainMenu::MainMenu(Core *core, Sound *sndRotate, Sound *sndSelect, Sound *sndSelectLocked, int numLevels, int numOthers, int selectedItem, Number incYaw, Number itemSize, Number itemBordW, Number itemGap, Color colActive, Color colInactive, Color colSelected, Color colLocked, Color colSelectedLocked, Scene *scn, SceneEntity *mn) : core(core), sndRotate(sndRotate), sndSelect(sndSelect), sndSelectLocked(sndSelectLocked), executingItem(false), numLevels(numLevels), selectedItem(selectedItem), angleRotLeft(0), incYaw(incYaw), itemSize(itemSize), itemBordW(itemBordW), itemGap(itemGap), colActive(colActive), colInactive(colInactive), colSelected(colSelected), colLocked(colLocked), colSelectedLocked(colSelectedLocked), scene(scn), menu(mn) {
+MainMenu::MainMenu(Core *core, Sound *sndRotate, Sound *sndSelect, Sound *sndSelectLocked, int numLevels, int numOthers, int selectedItem, Number incYaw, Number itemSize, Number itemBordW, Number itemGap, Color colActive, Color colInactive, Color colSelected, Color colLocked, Color colSelectedLocked, Scene *scn, SceneEntity *mn) : core(core), sndRotate(sndRotate), sndSelect(sndSelect), sndSelectLocked(sndSelectLocked), executingItem(false), numLevels(numLevels), selectedItem(selectedItem), angleRotLeft(0), incYaw(incYaw), itemSize(itemSize), itemBordW(itemBordW), itemGap(max(itemGap,0.5)), colActive(colActive), colInactive(colInactive), colSelected(colSelected), colLocked(colLocked), colSelectedLocked(colSelectedLocked), scene(scn), menu(mn), hud(NULL) {
     numMenuItems = numLevels + numOthers;
-    menuRad = (itemSize+itemGap)/sqrt(2*(1-cos(2*PI/numMenuItems)));
+    menuRad = (itemSize+this->itemGap)/(2*tan(PI/numMenuItems));
+    hud = new Hud(core);
     
     for(unsigned int i=1; i<=numLevels; i++){
-        items.push_back(new MainMenuItem(core, this, i, i!=1)); // All levels locked except for level 1
+        items.push_back(new MainMenuItem(core, hud, this, i, i!=1)); // All levels locked except for level 1
     }
-    items.push_back(new MainMenuItem(core, this, MainMenuItem::ITEM_EXIT, "", "Exit.png"));
+    items.push_back(new MainMenuItem(core, hud, this, MainMenuItem::ITEM_EXIT, "", "Exit.png"));
     
     loadMenu();
-    CoreServices::getInstance()->getCore()->getInput()->addEventListener(this, InputEvent::EVENT_KEYDOWN);
-    CoreServices::getInstance()->getCore()->getInput()->addEventListener(this, InputEvent::EVENT_KEYUP);
+    core->getInput()->addEventListener(this, InputEvent::EVENT_KEYDOWN);
+    core->getInput()->addEventListener(this, InputEvent::EVENT_KEYUP);
 }
 
 MainMenu::~MainMenu(){
@@ -128,6 +286,13 @@ void MainMenu::unlockNextLevel(int level){
         items.at(level)->locked = false;
         rotateTo(level);
     }
+}
+
+void MainMenu::lockAll(){
+    for(size_t i=0; i<items.size()-1; i++){
+        items.at(i)->locked = true;
+    }
+    rotateTo(numMenuItems-1);
 }
 
 void MainMenu::recolorBorders(){
@@ -181,7 +346,7 @@ void MainMenu::handleEvent(Event *e){
     if(executingItem) return;
     InputEvent *inputEvent = (InputEvent*)e;
     
-    if(e->getDispatcher() == CoreServices::getInstance()->getCore()->getInput()){
+    if(e->getDispatcher() == core->getInput()){
         switch(e->getEventCode()) {
             case InputEvent::EVENT_KEYDOWN:
                 if(inputEvent->keyCode() == KEY_RETURN) {

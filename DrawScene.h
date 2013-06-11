@@ -65,7 +65,7 @@ public:
     ScenePrimitive *coin;
     bool hasSmallValue;
     Number offset;
-    static unsigned int valueSm, valueLg;
+    static int valueSm, valueLg;
     static Number rotationVel;
     static Sound *sndCatch;
     static Color colorSm, colorLg;
@@ -73,7 +73,7 @@ public:
     Coin(CollisionScene *scene, Vector3 pos, bool hasSmallValue = true, Number offset = 0);
     ~Coin();
 
-    void catchCoin(unsigned int &points);
+    int catchCoin();
     void update(Number totalElapsed);
 };
 
