@@ -18,8 +18,8 @@
 #define DEF_WL_BORD_COL Color(0.0, 0.3, 0.5, 1.0)
 #define DEF_OBST_COLOR  Color(0.0, 1.0, 0.3, 1.0)
 #define DEF_OBS_BRD_COL Color(0.0, 0.5, 0.5, 1.0)
-#define DEF_ENMY_COLOR  Color(0.0, 1.0, 0.3, 1.0)
-#define DEF_ENM_BRD_COL Color(0.0, 0.5, 0.5, 1.0)
+#define DEF_ENMY_COLOR  Color(1.0, 0.0, 0.1, 1.0)
+#define DEF_ENM_BRD_COL Color(1.0, 0.4, 0.4, 1.0)
 #define DEF_COIN_SM_COL Color(1.0, 0.8, 0.0, 1.0)
 #define DEF_COIN_LG_COL Color(1.0, 0.5, 0.1, 1.0)
 #define COIN_SM_PARAMS  ScenePrimitive::TYPE_CYLINDER, 0.1, 1, 30
@@ -36,7 +36,7 @@ unsigned int Coin::valueSm = 1, Coin::valueLg = 3;
 Number Coin::rotationVel = 50;
 Sound *Coin::sndCatch = NULL;
 deque<Wall*>* DrawScene::walls = NULL;
-deque<ScenePrimitive*>* DrawScene::obstacles = NULL;
+deque<Obstacle*>* DrawScene::obstacles = NULL;
 deque<Enemy*>* DrawScene::enemies = NULL;
 deque<Coin*>* DrawScene::coins = NULL;
 ScenePrimitive* DrawScene::player = NULL;
@@ -61,6 +61,10 @@ Wall::Wall(CollisionScene *scene, Vector3 lastVertex, Vector3 newVertex, Number 
     wall->lookAt(newVertex, Vector3(0, 1, 0).crossProduct(newVertex-lastVertex));
     scene->addCollisionChild(wall, CollisionSceneEntity::SHAPE_BOX);
     drawWallBorder(scene, border, bordColor);   // After adding it to the scene, draw its border (if needed)
+}
+
+Wall::~Wall(){
+    wall->~ScenePrimitive();
 }
 
 void Wall::drawWallBorder(CollisionScene *scene, Number border, Color borderCol){
@@ -96,14 +100,40 @@ bool Wall::intersects(const Vector2& lDelta, Vector2& pt) {
     return true;
 }
 
-Enemy::Enemy(ScenePrimitive *enemy, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : enemy(enemy), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()), middlePos(enemy->getPosition()) {}
+Obstacle::Obstacle(ScenePrimitive *obstacle, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : obstacle(obstacle), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()), middlePos(obstacle->getPosition()), border(NULL) {}
+Obstacle::Obstacle(ScenePrimitive *obstacle, Vector3 middlePos, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : obstacle(obstacle), middlePos(middlePos), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()), border(NULL) {}
+Obstacle::~Obstacle(){
+    obstacle->~ScenePrimitive();
+    if(border) border->~ScenePrimitive();
+}
 
-Enemy::Enemy(ScenePrimitive *enemy, Vector3 middlePos, Number amplitude, Number velocity, Number offset, Vector3 movementDir) : enemy(enemy), middlePos(middlePos), amplitude(amplitude), velocity(velocity), offset(offset), movementDir(movementDir/movementDir.length()) {}
+void Obstacle::update(Number totalElapsed){
+    Vector3 oldPos = obstacle->getPosition();
+    
+    obstacle->setPosition(middlePos + movementDir*amplitude*sin(velocity*totalElapsed + offset));
+    if(border) border->Translate(obstacle->getPosition() - oldPos); // Not only update the obstacle, but also its border!
+}
+
+Enemy::Enemy(ScenePrimitive *enemy, Number ampH, Number ampV, Number velH, Number velV, Number offsH, Number offsV, Vector3 dirH, bool loopH, bool halfV) : enemy(enemy), ampH(ampH), ampV(ampV), velH(velH), velV(velV), offsH(offsH), offsV(offsV), dirH(Vector3(dirH.x, 0, dirH.z)/Vector3(dirH.x, 0, dirH.z).length()), middlePos(enemy->getPosition()), loopH(loopH), halfV(halfV), border(NULL) {}
+Enemy::Enemy(ScenePrimitive *enemy, Vector3 middlePos, Number ampH, Number ampV, Number velH, Number velV, Number offsH, Number offsV, Vector3 dirH, bool loopH, bool halfV) : enemy(enemy), ampH(ampH), ampV(ampV), velH(velH), velV(velV), offsH(offsH), offsV(offsV), dirH(Vector3(dirH.x, 0, dirH.z)/Vector3(dirH.x, 0, dirH.z).length()), middlePos(middlePos), loopH(loopH), halfV(halfV), border(NULL) {}
+Enemy::~Enemy(){
+    enemy->~ScenePrimitive();
+    if(border) border->~ScenePrimitive();
+}
 
 void Enemy::update(Number totalElapsed){
     Vector3 oldPos = enemy->getPosition();
+    Number moveH = fmod(velH*totalElapsed/ampH + offsH/90.0, 4);
+    Number factor = min(1.0,moveH) - min(2.0, max(0.0,moveH-1)) + max(0.0,moveH-3);
     
-    enemy->setPosition(middlePos + movementDir*amplitude*sin(velocity*totalElapsed + offset));
+    enemy->setPositionX(middlePos.x + ampH*dirH.x*factor);
+    enemy->setPositionZ(middlePos.z + ampH*dirH.z*factor);
+    if(halfV){
+        enemy->setPositionY(middlePos.y + ampV*abs(sin(velV*totalElapsed + offsV)));
+    }else{
+        enemy->setPositionY(middlePos.y + ampV*sin(velV*totalElapsed + offsV));
+    }
+    
     if(border) border->Translate(enemy->getPosition() - oldPos);    // Not only update the enemy, but also its border!
 }
 
@@ -118,6 +148,10 @@ Coin::Coin(CollisionScene *scene, Vector3 pos, bool hasSmallValue, Number offset
     coin->setPosition(pos);
     coin->setPitch(-90);    // Vertical
     scene->addCollisionChild(coin);
+}
+
+Coin::~Coin(){
+    coin->~ScenePrimitive();
 }
 
 void Coin::catchCoin(unsigned int &points){
@@ -230,7 +264,7 @@ Number DrawScene::getVelocity(xml_node<> *node, Number defValue){
 }
 
 Number DrawScene::getOffset(xml_node<> *node, Number defValue){
-    return getNumber("offs", node, defValue)*PI/180;
+    return getNumber("offs", node, defValue, false)*PI/180;
 }
 
 bool DrawScene::isAttributeTrue(const char* attrName, xml_node<> *node, bool defValue){
@@ -391,7 +425,7 @@ void DrawScene::drawWalls(CollisionScene *scene, xml_node<> *ndWalls){
     }
 }
 
-void DrawScene::drawObstacles(CollisionScene *scene, xml_node<> *ndObstacles){
+/*void DrawScene::drawObstacles(CollisionScene *scene, xml_node<> *ndObstacles){
     if(!ndObstacles) ERROR("Incorrect format: One child of 'geometry' must be 'obstacles'");
     ScenePrimitive *scnPrimitive = NULL, *obsBorder = NULL;
     Vector3 pos;
@@ -426,10 +460,62 @@ void DrawScene::drawObstacles(CollisionScene *scene, xml_node<> *ndObstacles){
         }
         node = node->next_sibling();                            // Get the next obstacle
     } while(node);                                              // Until there are no more obstacles
+}*/
+
+void DrawScene::drawObstacles(CollisionScene *scene, xml_node<> *ndObstacles){
+    if(!ndObstacles) ERROR("Incorrect format: One child of 'geometry' must be 'obstacles'");
+    ScenePrimitive *scnPrimitive = NULL;
+    Obstacle *obstacle = NULL;
+    Vector3 pos, dir, lookAt;
+    Number border;
+    Color color, bordCol;
+    int shape = CollisionSceneEntity::SHAPE_BOX;
+    xml_node<> *node = ndObstacles->first_node("obstacle", 0, false);   // Get the first obstacle
+    if(!node) ERROR("Incorrect format: The tag 'obstacles' must have at least 1 'obstacle' child");
+    
+    getColor(Obstacle::defColor, ndObstacles);                          // Configure parameters by default (values in case not specified)
+    getColor(Obstacle::defBordColor, ndObstacles, "bord");
+    Obstacle::defBorder = getBorder(ndObstacles, Obstacle::defBorder);
+    
+    do{
+        scnPrimitive = iniPrimitive(shape, node);                       // Initialize the obstacle (create instance of ScenePrimitive)
+        if(scnPrimitive){
+            color = Obstacle::defColor;                                 // Default color
+            pos = Vector3(0, 0, 0);                                     // Default position
+            dir = Vector3(1, 0, 0);                                     // Default movement direction
+            getColor(color, node);                                      // Get its color
+            getPosition(pos, node);                                     // Position
+            getMovementDir(dir, node);                                  // And direction of movement
+            lookAt = Vector3(0, 0, 1).crossProduct(dir);
+            if(lookAt.length() > 0) scnPrimitive = iniPrimitive(shape, node, true);
+            scnPrimitive->setColor(color);                              // Apply those settings
+            scnPrimitive->setPosition(pos);
+            scnPrimitive->backfaceCulled = false;
+            obstacle = new Obstacle(scnPrimitive);                      // Create a new obstacle and configure its parameters
+            obstacle->movementDir = dir;                                // Configure obstacle's parameters
+            obstacle->amplitude = getAmplitude(node);
+            obstacle->velocity = getVelocity(node);
+            obstacle->offset = getOffset(node);
+            bordCol = Obstacle::defBordColor;
+            getColor(bordCol, node, "bord");
+            border = getBorder(node, Obstacle::defBorder);              // Read border setting or use defBorder by default
+            obstacle->border = iniShapeBorder(scene, border, shape, pos, bordCol, node, lookAt.length()>0);
+            if(obstacle->border){
+                scene->addChild(obstacle->border);
+                if(lookAt.length() > 0) obstacle->border->lookAt(pos + dir, lookAt);
+            }
+            if(lookAt.length() > 0) obstacle->obstacle->lookAt(pos + dir, lookAt);
+            obstacles->push_back(obstacle);                             // Store pointer in the queue enemies
+            scene->addCollisionChild(obstacles->back()->obstacle, shape);//And add the enemy to the scene
+        }else{
+            cout << "Incorrect format: the attribute 'type' of the tag 'enemy' must exist and be one of these: BOX, PLANE, SPHERE, CYLINDER, UNCAPPED_CYLINDER, CONE, TORUS. Enemy skipped.\n";
+        }
+        node = node->next_sibling();                                // Get the next enemy
+    } while(node);                                                  // Until there are no more enemies
 }
 
 void DrawScene::drawEnemies(CollisionScene *scene, xml_node<> *ndEnemies){
-    if(!ndEnemies) ERROR("Incorrect format: One child of 'geometry' must be 'enemies'");
+    /*if(!ndEnemies) ERROR("Incorrect format: One child of 'geometry' must be 'enemies'");
     ScenePrimitive *scnPrimitive = NULL;
     Enemy *enemy = NULL;
     Vector3 pos, dir, lookAt;
@@ -444,7 +530,7 @@ void DrawScene::drawEnemies(CollisionScene *scene, xml_node<> *ndEnemies){
     Enemy::defBorder = getBorder(ndEnemies, Enemy::defBorder);
     
     do{
-        scnPrimitive = iniPrimitive(shape, node);                   // Initialize the obstacle (create instance of ScenePrimitive)
+        scnPrimitive = iniPrimitive(shape, node);                   // Initialize the enemy (create instance of ScenePrimitive)
         if(scnPrimitive){
             color = Enemy::defColor;                                // Default color
             pos = Vector3(0, 0, 0);                                 // Default position
@@ -459,8 +545,8 @@ void DrawScene::drawEnemies(CollisionScene *scene, xml_node<> *ndEnemies){
             scnPrimitive->backfaceCulled = false;
             enemy = new Enemy(scnPrimitive);                        // Create a new enemy and configure its parameters
             enemy->movementDir = dir;                               // Configure enemy's parameters
-            enemy->amplitude = getAmplitude(node, 5);
-            enemy->velocity = getVelocity(node, 1);
+            enemy->amplitude = getAmplitude(node);
+            enemy->velocity = getVelocity(node);
             enemy->offset = getOffset(node);
             bordCol = Enemy::defBordColor;
             getColor(bordCol, node, "bord");
@@ -477,7 +563,7 @@ void DrawScene::drawEnemies(CollisionScene *scene, xml_node<> *ndEnemies){
             cout << "Incorrect format: the attribute 'type' of the tag 'enemy' must exist and be one of these: BOX, PLANE, SPHERE, CYLINDER, UNCAPPED_CYLINDER, CONE, TORUS. Enemy skipped.\n";
         }
         node = node->next_sibling();                                // Get the next enemy
-    } while(node);                                                  // Until there are no more enemies
+    } while(node);                                                  // Until there are no more enemies*/
 }
 
 void DrawScene::drawCoins(CollisionScene *scene, xml_node<> *ndCoins){
@@ -504,6 +590,7 @@ void DrawScene::drawPlayer(CollisionScene *scene, xml_node<> *ndPlayer){
     Vector3 pos = DEF_PLAY_POS;
     int shape = DEF_PLAY_SHAPE;
     
+    player = NULL;
     if(ndPlayer){
         player = iniPrimitive(shape, ndPlayer); // Initialize the player (create instance of ScenePrimitive)
         getColor(Player::defColor, ndPlayer);   // Get its color
@@ -547,7 +634,7 @@ void DrawScene::setupScene(CollisionScene *scene, xml_node<> *ndScene){
     }
 }
 
-void DrawScene::drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<Wall*>& wlls, deque<ScenePrimitive*>& obstcls, deque<Enemy*>& enms, deque<Coin*>& cns, const char *strFile){
+void DrawScene::drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<Wall*>& wlls, deque<Obstacle*>& obstcls, deque<Enemy*>& enms, deque<Coin*>& cns, const char *strFile){
     if(!fileExists(strFile)) ERROR("Error: File not found (" << strFile << ")");
     file<> file(strFile);                                               // Open the xml file after making sure it exists
     xml_document<> doc;
