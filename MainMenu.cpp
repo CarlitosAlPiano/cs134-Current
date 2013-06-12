@@ -1,10 +1,10 @@
 #include "MainMenu.h"
 
-int Hud::points = 0, Hud::livesLeft = 2;
+int Hud::points = 0, Hud::livesLeft = 3, Hud::pointsPerLife = 25;
 Number Hud::maxHealth = 100.0, Hud::health = maxHealth;
 const int MainMenuItem::ITEM_EXIT = 0;
 
-Hud::Hud(Core *core, Vector2 imgCoinSize, Vector2 imgHealthSize, Vector2 healthBarSize, Vector2 margin, Number healthBarBorderW, Number blinkThresh, Number blinkPeriod, Color colLblLivesLeft, Color colLblPoints, Color colMaxHealth, Color colMinHealth, Color colBordMaxHealth, Color colBordMinHealth) : core(core), imgCoinSize(imgCoinSize), imgHealthSize(imgHealthSize), healthBarSize(healthBarSize), margin(margin), healthBarBorderW(healthBarBorderW), blinkThresh(blinkThresh), blinkPeriod(blinkPeriod), colLblLivesLeft(colLblLivesLeft), colLblPoints(colLblPoints), colMaxHealth(colMaxHealth), colMinHealth(colMinHealth), colBordMaxHealth(colBordMaxHealth), colBordMinHealth(colBordMinHealth), tmrBlink(NULL) {
+Hud::Hud(Core *core, Vector2 imgCoinSize, Vector2 imgHealthSize, Vector2 healthBarSize, Vector2 levelEndedBkgndSize, Vector2 margin, Number healthBarBorderW, Number levelEndedBkgndBorderW, Number blinkThresh, Number blinkPeriod, Color colLblLivesLeft, Color colLblPoints, Color colMaxHealth, Color colMinHealth, Color colBordMaxHealth, Color colBordMinHealth, Color colLevelEndedBkgndSurvived, Color colLevelEndedBkgndDied) : core(core), imgCoinSize(imgCoinSize), imgHealthSize(imgHealthSize), healthBarSize(healthBarSize), levelEndedBkgndSize(levelEndedBkgndSize), margin(margin), healthBarBorderW(healthBarBorderW), levelEndedBkgndBorderW(levelEndedBkgndBorderW), blinkThresh(blinkThresh), blinkPeriod(blinkPeriod), colLblLivesLeft(colLblLivesLeft), colLblPoints(colLblPoints), colMaxHealth(colMaxHealth), colMinHealth(colMinHealth), colBordMaxHealth(colBordMaxHealth), colBordMinHealth(colBordMinHealth), colLevelEndedBkgndSurvived(colLevelEndedBkgndSurvived), colLevelEndedBkgndDied(colLevelEndedBkgndDied), tmrBlink(NULL) {
     loadHud();
 }
 
@@ -13,7 +13,9 @@ Hud::~Hud(){
 }
 
 void Hud::loadHud(){
+    loaded = true;
     hud = new Screen();
+    sndLifeUp = new Sound("lifeUp.ogg");
     imgHealth = new ScreenImage("HUD_health.png");
     imgHealth->setPositionMode(ScreenEntity::POSITION_TOPLEFT);
     imgHealth->setPosition(margin.x, margin.y+6);
@@ -24,30 +26,50 @@ void Hud::loadHud(){
     healthBarBorder = new ScreenShape(ScreenShape::SHAPE_RECT, healthBarSize.x, healthBarSize.y);
     healthBarBorder->setPositionMode(ScreenEntity::POSITION_TOPLEFT);
     healthBarBorder->setPosition(healthBar->getPosition2D());
-    healthBarBorder->lineWidth = 2;
+    healthBarBorder->lineWidth = healthBarBorderW;
     healthBarBorder->renderWireframe = true;
     lblLivesLeft = new ScreenLabel("", 26);
     lblLivesLeft->setPosition(healthBar->getPosition2D().x+healthBarSize.x+margin.x, margin.y);
     lblLivesLeft->setColor(colLblLivesLeft);
-    lblPoints = new ScreenLabel("999", 26);
+    lblPoints = new ScreenLabel("99", 26);
     lblPoints->setPositionY(margin.y);
     lblPoints->setColor(colLblPoints);
     imgCoin = new ScreenImage("HUD_coin.png");
     imgCoin->setPositionMode(ScreenEntity::POSITION_TOPLEFT);
     imgCoin->setPosition(core->getXRes()-2*margin.x-lblPoints->getWidth()-imgCoinSize.x, margin.y+5);
     imgCoin->setShapeSize(imgCoinSize.x, imgCoinSize.y);
+    lblLevelEndedL1 = new ScreenLabel("A", 40);
+    lblLevelEndedL1->setPositionMode(ScreenEntity::POSITION_CENTER);
+    lblLevelEndedL1->setPosition(core->getXRes()/2, core->getYRes()/2 - lblLevelEndedL1->getHeight());
+    lblLevelEndedL2 = new ScreenLabel("A", 35);
+    lblLevelEndedL2->setPositionMode(ScreenEntity::POSITION_CENTER);
+    lblLevelEndedL2->setPosition(core->getXRes()/2, core->getYRes()/2 + lblLevelEndedL2->getHeight());
+    levelEndedBkgnd = new ScreenShape(ScreenShape::SHAPE_RECT, levelEndedBkgndSize.x, levelEndedBkgndSize.y);
+    levelEndedBkgnd->setPositionMode(ScreenEntity::POSITION_CENTER);
+    levelEndedBkgnd->setPosition(core->getXRes()/2, core->getYRes()/2);
+    levelEndedBkgndBorder = new ScreenShape(ScreenShape::SHAPE_RECT, levelEndedBkgndSize.x, levelEndedBkgndSize.y);
+    levelEndedBkgndBorder->setPositionMode(ScreenEntity::POSITION_CENTER);
+    levelEndedBkgndBorder->setPosition(levelEndedBkgnd->getPosition2D());
+    levelEndedBkgndBorder->lineWidth = levelEndedBkgndBorderW;
+    levelEndedBkgndBorder->renderWireframe = true;
     setPoints(points);
     restoreHealth();
     setLivesLeft(livesLeft);
+    hideLevelEndedText();
     hud->addChild(imgHealth);
     hud->addChild(healthBar);
     hud->addChild(healthBarBorder);
     hud->addChild(lblLivesLeft);
     hud->addChild(imgCoin);
     hud->addChild(lblPoints);
+    hud->addChild(lblLevelEndedL1);
+    hud->addChild(lblLevelEndedL2);
+    hud->addChild(levelEndedBkgnd);
+    hud->addChild(levelEndedBkgndBorder);
 }
 
 void Hud::unloadHud(){
+    loaded = false;
     imgHealth->~ScreenImage();
     imgCoin->~ScreenImage();
     healthBar->~ScreenShape();
@@ -59,6 +81,7 @@ void Hud::unloadHud(){
         tmrBlink->~Timer();
         tmrBlink = NULL;
     }
+    sndLifeUp->~Sound();
     hud->~Screen();
     hud = NULL;
 }
@@ -94,12 +117,19 @@ void Hud::setPoints(int pts){
     static Number posX = core->getXRes()-margin.x;
     
     points = pts;
-    updateTextWithNum(lblPoints, pts);
+    if(points >= pointsPerLife){
+        incLivesLeft(points/pointsPerLife);
+        points = points%pointsPerLife;
+        if(loaded) sndLifeUp->Play();
+    }
+    if(!loaded) return;
+    updateTextWithNum(lblPoints, points);
     lblPoints->setPositionX(posX-lblPoints->getWidth());
 }
 
 void Hud::setLivesLeft(int lives){
     livesLeft = lives;
+    if(!loaded) return;
     if(livesLeft <= 0){
         lblLivesLeft->setText((livesLeft == 0)? "Last life!":"Game over!!");
         lblLivesLeft->setColor(colMinHealth);
@@ -113,6 +143,7 @@ void Hud::setHealth(Number healthPts){
     Number t;
     
     health = max(min(healthPts, maxHealth), -0.1);
+    if(!loaded) return;
     t = health/maxHealth;
     healthBar->setShapeSize(t*healthBarSize.x, healthBarSize.y);
     healthBar->setColor(colMaxHealth*t + colMinHealth*(1-t));
@@ -153,20 +184,74 @@ void Hud::decHealth(int dec){
     setHealth(health-dec);
 }
 
+void Hud::showLevelEndedText(int code, int numLevel, int numTotalLevels, bool nextLevelLocked){
+    stringstream ss;
+    
+    levelEndedBkgnd->visible = true;
+    levelEndedBkgndBorder->visible = true;
+    switch(code) {
+        case Level::EXIT_SURVIVED:
+            ss << numLevel;
+            lblLevelEndedL1->setColor(colMaxHealth);
+            lblLevelEndedL2->setColor(colMaxHealth);
+            levelEndedBkgnd->setColor(colLevelEndedBkgndSurvived);
+            levelEndedBkgndBorder->setColor(colMaxHealth);
+            if(numLevel == numTotalLevels){
+                lblLevelEndedL1->setText("CONGRATULATIONS!! :)");
+                lblLevelEndedL2->setText("You finished the game!");
+            }else if(nextLevelLocked){
+                lblLevelEndedL1->setText("Yay! Level " + ss.str() + " cleared!");
+                ss.str("");
+                ss << numLevel+1;
+                lblLevelEndedL2->setText("Level " + ss.str() + " unlocked!! :)");
+            }else{
+                lblLevelEndedL1->setText("You did it again!");
+                lblLevelEndedL2->setText("Level " + ss.str() + " cleared! :)");
+            }
+            break;
+        case Level::EXIT_DIED:
+        default:
+            decLivesLeft(1);
+            lblLevelEndedL1->setColor(colMinHealth);
+            lblLevelEndedL2->setColor(colMinHealth);
+            levelEndedBkgnd->setColor(colLevelEndedBkgndDied);
+            levelEndedBkgndBorder->setColor(colMinHealth);
+            lblLevelEndedL1->setText("Oooops!! You died!");
+            if(livesLeft < 0){
+                lblLevelEndedL2->setText("GAME OVER!! :(");
+            }else if(livesLeft == 0){
+                lblLevelEndedL2->setText("You don't have extra lives!");
+            }else if(livesLeft == 1){
+                lblLevelEndedL2->setText("You only have one extra life!");
+            }else{
+                ss << livesLeft;
+                lblLevelEndedL2->setText("Still " + ss.str() + " lives left...");
+            }
+            break;
+    }
+}
+
+void Hud::hideLevelEndedText(){
+    lblLevelEndedL1->setText("");
+    lblLevelEndedL2->setText("");
+    levelEndedBkgnd->visible = false;
+    levelEndedBkgndBorder->visible = false;
+}
+
 void Hud::handleEvent(Event *e){
     if(e->getDispatcher()==tmrBlink && e->getEventCode()==Timer::EVENT_TRIGGER){
         healthBar->visible = !healthBar->visible;
     }
 }
 
-MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, bool locked) : core(core), hud(hud), menu(menu), numLevel(numLevel), locked(locked), level(NULL), image(NULL), imageBorder(NULL) {
+MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, bool locked, int levelEndedTextPeriod) : core(core), hud(hud), menu(menu), numLevel(numLevel), locked(locked), levelEndedTextPeriod(levelEndedTextPeriod), level(NULL), image(NULL), imageBorder(NULL) {
     stringstream ss;
     ss << numLevel;
     
     iniItem("Level " + ss.str() + ".xml", "Level " + ss.str() + ".png");
 }
 
-MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool locked) : core(core), menu(menu), numLevel(numLevel), locked(locked), level(NULL), image(NULL), imageBorder(NULL) {
+MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool locked, int levelEndedTextPeriod) : core(core), menu(menu), numLevel(numLevel), locked(locked), levelEndedTextPeriod(levelEndedTextPeriod), level(NULL), image(NULL), imageBorder(NULL) {
     iniItem(geometryFile, imageFile);
 }
 
@@ -179,6 +264,7 @@ MainMenuItem::~MainMenuItem(){
 void MainMenuItem::iniItem(string geomFile, string imageFile){
     Number th = (numLevel-1)*2*PI/menu->numMenuItems;
     
+    levelEnded = false;
     geometryFile = geomFile;
     image = new ScenePrimitive(ScenePrimitive::TYPE_PLANE, menu->itemSize, menu->itemSize);
     image->setPosition(Vector3(-menu->menuRad*sin(th), 0, -menu->menuRad*cos(th)));
@@ -205,28 +291,45 @@ void MainMenuItem::loadLevel(){
         exit(EXIT_SUCCESS);
     }else{
         level = new Level(core, hud, this, geometryFile);
+        levelEnded = false;
     }
 }
 
 void MainMenuItem::exitLevel(int code){
-    if(level) level->~Level();
-    level = NULL;
-    menu->loadMenu();
-    hud->restoreHealth();
-    switch(code) {
-        case Level::EXIT_SURVIVED:
-            menu->unlockNextLevel(numLevel);
-            break;
-        case Level::EXIT_DIED:
-        default:
-            hud->decLivesLeft(1);
-            if(hud->isGameOver()) menu->lockAll();
-            break;
+    levelEnded = true;
+    levelEndedCode = code;
+
+    hud->showLevelEndedText(code, numLevel, menu->numMenuItems, menu->items.at(numLevel)->locked);
+    tmrLevelEnded = new Timer(true, levelEndedTextPeriod);
+    tmrLevelEnded->addEventListener(this, Timer::EVENT_TRIGGER);
+}
+
+void MainMenuItem::handleEvent(Event *e){
+    if(e->getDispatcher()==tmrLevelEnded && e->getEventCode()==Timer::EVENT_TRIGGER){
+        tmrLevelEnded->removeAllHandlers();
+        tmrLevelEnded->~Timer();
+        tmrLevelEnded = NULL;
+        
+        if(level) level->~Level();
+        level = NULL;
+        menu->loadMenu();
+        hud->hideLevelEndedText();
+        hud->restoreHealth();
+        switch(levelEndedCode) {
+            case Level::EXIT_SURVIVED:
+                menu->unlockNextLevel(numLevel);
+                break;
+            case Level::EXIT_DIED:
+            default:
+                if(hud->isGameOver()) menu->lockAll();
+                break;
+        }
     }
 }
 
 bool MainMenuItem::Update(){
-    return level->Update();
+    if(!levelEnded) return level->Update();
+    return core->Update();
 }
 
 MainMenu::MainMenu(Core *core, Sound *sndRotate, Sound *sndSelect, Sound *sndSelectLocked, int numLevels, int numOthers, int selectedItem, Number incYaw, Number itemSize, Number itemBordW, Number itemGap, Color colActive, Color colInactive, Color colSelected, Color colLocked, Color colSelectedLocked, Scene *scn, SceneEntity *mn) : core(core), sndRotate(sndRotate), sndSelect(sndSelect), sndSelectLocked(sndSelectLocked), executingItem(false), numLevels(numLevels), selectedItem(selectedItem), angleRotLeft(0), incYaw(incYaw), itemSize(itemSize), itemBordW(itemBordW), itemGap(max(itemGap,0.5)), colActive(colActive), colInactive(colInactive), colSelected(colSelected), colLocked(colLocked), colSelectedLocked(colSelectedLocked), scene(scn), menu(mn), hud(NULL) {

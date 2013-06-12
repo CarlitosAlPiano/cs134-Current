@@ -10,7 +10,7 @@
 #define CAM_MIN_RAD     20
 #define CAM_MAX_RAD     100
 #define CAM_MAX_ELEV    PI/2 - 0.01
-#define BB_HALF_DEPTH   10
+#define BB_HALF_DEPTH   5
 #define BB_FRTH_LIMIT   (currentZ + BB_HALF_DEPTH)
 #define BB_CLSR_LIMIT   (currentZ - BB_HALF_DEPTH)
 #define BB_TOP_LIMIT    (Wall::height - playerRad)
@@ -50,6 +50,7 @@ Level::~Level() {
     tmrForceHome->~Timer();
     scene->ownsChildren = true;
     scene->~CollisionScene();
+    scene = NULL;
     core->getInput()->removeAllHandlersForListener(this);
 }
 
@@ -92,7 +93,7 @@ void Level::loadLevel(string& geometryFile) {
     tmrForceHome->Pause(true);
     playerVeloc = Vector3(0, 0, CAM_VEL_Z);
     playerRad = player->getMesh()->getRadius();
-    currentZ = player->getPosition().z - CAM_VEL_Z;
+    currentZ = player->getPosition().z;
     totalElapsed = 0;
     lastCollision = 0;
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEMOVE);
@@ -106,6 +107,8 @@ void Level::loadLevel(string& geometryFile) {
     if(DrawScene::backgndMusicEn){
         bgndMusic = new Sound("level1_bkgnd.ogg");
         bgndMusic->Play(true);
+    }else{
+        bgndMusic = NULL;
     }
 }
 
@@ -128,6 +131,9 @@ void Level::playerSubtractHealth(Number healthSub, bool checkLastCollision){
         if(healthSub <= 0) healthSub = 10 + (random()%10);      // Reduce health by 10~20 by default
         hud->decHealth(healthSub);
         if(hud->isDead()){
+            if(bgndMusic) bgndMusic->~Sound();
+            bgndMusic = new Sound("endLevelDied.ogg");
+            bgndMusic->Play();
             mainMenu->exitLevel(Level::EXIT_DIED);
             return;
         }
@@ -145,10 +151,7 @@ bool Level::checkPlayerCollision(ScenePrimitive *obstacle) {
     normal.Normalize();
     
     if(res.collided && res.colNormal.length() > 0) {
-        if(res.colNormal.angleBetween(playerVeloc)*180/PI < 91){
-            //playerVeloc = normal.crossProduct(playerVeloc).crossProduct(normal);    // Only keep tangencial velocity (v_normal = 0)
-        }
-        player->setPosition(oldPos + res.colNormal*res.colDist + playerVeloc);
+        player->setPosition(oldPos + res.colNormal*res.colDist);
         if(player->getPosition().z < BB_CLSR_LIMIT){                                // If collision puts player outside BB -> Immediately subtract health
             if(normal.dot(Vector3(0,0,1)) > 0.5)    // Only if wall is a diagonal like this /\; Don't subtract health if it's like this: \/
                 playerSubtractHealth(8*abs(player->getPosition().z - BB_CLSR_LIMIT)*normal.dot(Vector3(0,0,1)), false);
@@ -190,6 +193,16 @@ void Level::computeRiverWidth(){
     playerSubtractHealth(hud->maxHealth, false);        // This should never happen either. Kill player (it's even further away than last wall, sorted by "x" coord!)
 }
 
+void Level::recomputePlayerVelocZ() {
+    if(further_pressed == closer_pressed){
+        playerVeloc.z = CAM_VEL_Z + VEL_RET_HOME*(stateHome==RET_FROM_BACK) - VEL_RET_HOME*(stateHome==RET_FROM_FRONT);
+    }else if(further_pressed){
+        playerVeloc.z = VEL_PLAYER_INC + CAM_VEL_Z - VEL_RET_HOME*tmrForceHome->getElapsedf()*(stateHome==RET_FROM_FRONT);
+    }else{
+        playerVeloc.z =-VEL_PLAYER_INC + CAM_VEL_Z + VEL_RET_HOME*tmrForceHome->getElapsedf()*(stateHome==RET_FROM_BACK);
+    }
+}
+
 void Level::recomputePlayerVeloc() {
     if(left_pressed == right_pressed){
         playerVeloc.x = 0;
@@ -205,13 +218,7 @@ void Level::recomputePlayerVeloc() {
     }else{
         playerVeloc.y = -VEL_PLAYER_INC;
     }
-    if(further_pressed == closer_pressed){
-        playerVeloc.z = CAM_VEL_Z + VEL_RET_HOME*(stateHome==RET_FROM_BACK) - VEL_RET_HOME*(stateHome==RET_FROM_FRONT);
-    }else if(further_pressed){
-        playerVeloc.z = VEL_PLAYER_INC + CAM_VEL_Z - VEL_RET_HOME*tmrForceHome->getElapsedf()*(stateHome==RET_FROM_FRONT);
-    }else{
-        playerVeloc.z =-VEL_PLAYER_INC + CAM_VEL_Z + VEL_RET_HOME*tmrForceHome->getElapsedf()*(stateHome==RET_FROM_BACK);
-    }
+    recomputePlayerVelocZ();
 }
 
 void Level::keepPlayerHome(){
@@ -238,7 +245,7 @@ void Level::keepPlayerHome(){
                 }
             case RET_FROM_FRONT:
             default:
-                recomputePlayerVeloc();
+                recomputePlayerVelocZ();
                 break;
         }
     }else if(z < BB_CLSR_LIMIT){
@@ -262,7 +269,7 @@ void Level::keepPlayerHome(){
                 }
             case RET_FROM_BACK:
             default:
-                recomputePlayerVeloc();
+                recomputePlayerVelocZ();
         }
     }
 }
@@ -271,12 +278,21 @@ void Level::keepPlayerWithinBB(){
     Vector3 pos = player->getPosition();
     
     currentZ += CAM_VEL_Z;
+    recomputePlayerVelocZ();
     keepPlayerHome();
     if(pos.y > BB_TOP_LIMIT){
         player->setPositionY(BB_TOP_LIMIT);
     }else if(pos.y <  BB_BTM_LIMIT){
         player->setPositionY(BB_BTM_LIMIT);
     }
+}
+
+void Level::updatePlayerPos(){
+    computeRiverWidth();        // Compute the width of the river in this point
+    if(!scene) return;          // This happens when player was found dead in computeRiverWidth()
+    recomputePlayerVelocZ();    // Recompute player's "z" velocity based on new river width
+    player->setPosition(player->getPosition() + playerVeloc);
+    keepPlayerWithinBB();       // Update currentZ and keep player inside the BB
 }
 
 void Level::handleEvent(Event *e) {
@@ -347,12 +363,14 @@ void Level::handleEvent(Event *e) {
                         break;
                     case KEY_ESCAPE:
                         core->paused = !core->paused;
-                        if(core->paused){
-                            bgndMusicOffset = bgndMusic->getOffset();
-                            bgndMusic->Stop();
-                        }else{
-                            bgndMusic->Play(true);
-                            bgndMusic->setOffset(bgndMusicOffset);
+                        if(bgndMusic){
+                            if(core->paused){
+                                bgndMusicOffset = bgndMusic->getOffset();
+                                bgndMusic->Stop();
+                            }else{
+                                bgndMusic->Play(true);
+                                bgndMusic->setOffset(bgndMusicOffset);
+                            }
                         }
                 }
                 recomputePlayerVeloc();
@@ -402,15 +420,15 @@ bool Level::Update() {
 	Number elapsed = core->getElapsed();
     totalElapsed += elapsed;
     
-    computeRiverWidth();
-    if(hud->isDead()) return core->updateAndRender();
-    keepPlayerWithinBB();
 	scene->getDefaultCamera()->setPositionX(camRad*cos(camElev)*cos(camRot));
     scene->getDefaultCamera()->setPositionY(camRad*sin(camElev) + Wall::height);
 	scene->getDefaultCamera()->setPositionZ(camRad*cos(camElev)*sin(camRot) + currentZ);
     scene->getDefaultCamera()->lookAt(Vector3(0, Wall::height/2, currentZ));
     
     if(checkPlayerCollision(walls.front()->wall)){  // Check if player "collided" with goal wall
+        if(bgndMusic) bgndMusic->~Sound();
+        bgndMusic = new Sound("endLevelSurvived.ogg");
+        bgndMusic->Play();
         mainMenu->exitLevel(Level::EXIT_SURVIVED);
         return core->updateAndRender();
     }
@@ -438,7 +456,8 @@ bool Level::Update() {
     for(size_t i=1; i<walls.size(); i++){           // WALLS
         checkPlayerCollision(walls.at(i)->wall);
     }
-    player->setPosition(player->getPosition() + playerVeloc);
+
+    updatePlayerPos();                              // PLAYER
 	
     return core->updateAndRender();
 }

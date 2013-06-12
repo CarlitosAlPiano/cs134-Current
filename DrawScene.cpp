@@ -422,6 +422,11 @@ void DrawScene::drawWalls(CollisionScene *scene, xml_node<> *ndWalls){
         }
         lastVertex = newVertex;                 // In the next iteration, lastVertex will be the current vertex
     }
+    
+    ScenePrimitive *sp = new ScenePrimitive(ScenePrimitive::TYPE_PLANE, 5000, 5000);
+    sp->setPositionY(-0.2);
+    sp->setColor(1.0, 1.0, 0.5, 1.0);
+    scene->addChild(sp);
 }
 
 /*void DrawScene::drawObstacles(CollisionScene *scene, xml_node<> *ndObstacles){

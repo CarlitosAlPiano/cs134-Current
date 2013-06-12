@@ -14,20 +14,23 @@ private:
     Core *core;
     Screen *hud;
     ScreenImage *imgHealth, *imgCoin;
-    ScreenShape *healthBar, *healthBarBorder;
-    ScreenLabel *lblLivesLeft, *lblPoints;
+    ScreenShape *healthBar, *healthBarBorder, *levelEndedBkgnd, *levelEndedBkgndBorder;
+    ScreenLabel *lblLivesLeft, *lblPoints, *lblLevelEndedL1, *lblLevelEndedL2;
+    Sound *sndLifeUp;
     Timer *tmrBlink;
-    Vector2 imgCoinSize, imgHealthSize, healthBarSize, margin;
-    Number healthBarBorderW, blinkThresh, blinkPeriod;
-    Color colLblLivesLeft, colLblPoints, colMaxHealth, colMinHealth, colBordMaxHealth, colBordMinHealth;
+    Vector2 imgCoinSize, imgHealthSize, healthBarSize, levelEndedBkgndSize, margin;
+    Number healthBarBorderW, levelEndedBkgndBorderW, blinkThresh, blinkPeriod;
+    Color colLblLivesLeft, colLblPoints, colMaxHealth, colMinHealth, colBordMaxHealth, colBordMinHealth, colLevelEndedBkgndSurvived, colLevelEndedBkgndDied;
     static int points, livesLeft;
     static Number health;
+    bool loaded;
     
     void updateTextWithNum(ScreenLabel*lbl, int num);
 public:
+    static int pointsPerLife;
     static Number maxHealth;
     
-    Hud(Core *core, Vector2 imgCoinSize = Vector2(20, 20), Vector2 imgHealthSize = Vector2(20, 20), Vector2 healthBarSize = Vector2(150, 25), Vector2 margin = Vector2(7, 2), Number healthBarBorderW = 2, Number blinkThresh = 0.2, Number blinkPeriod = 250, Color colLblLivesLeft = Color(0.2, 0.8, 0.2, 1.0), Color colLblPoints = Color(0.9, 0.7, 0.2, 1.0), Color colMaxHealth = Color(0.0, 1.0, 0.0, 1.0), Color colMinHealth = Color(1.0, 0.0, 0.0, 1.0), Color colBordMaxHealth = Color(0.0, 0.4, 0.0, 1.0), Color colBordMinHealth = Color(0.4, 0.0, 0.0, 1.0));
+    Hud(Core *core, Vector2 imgCoinSize = Vector2(20, 20), Vector2 imgHealthSize = Vector2(20, 20), Vector2 healthBarSize = Vector2(150, 25), Vector2 levelEndedBkgndSize = Vector2(550,350), Vector2 margin = Vector2(7, 2), Number healthBarBorderW = 2, Number levelEndedBkgndBorderW = 2, Number blinkThresh = 0.2, Number blinkPeriod = 250, Color colLblLivesLeft = Color(0.2, 0.8, 0.2, 1.0), Color colLblPoints = Color(0.9, 0.7, 0.2, 1.0), Color colMaxHealth = Color(0.0, 1.0, 0.0, 1.0), Color colMinHealth = Color(1.0, 0.0, 0.0, 1.0), Color colBordMaxHealth = Color(0.0, 0.4, 0.0, 1.0), Color colBordMinHealth = Color(0.4, 0.0, 0.0, 1.0), Color colLevelEndedBkgndSurvived = Color(0.2, 0.8, 0.2, 0.4), Color colLevelEndedBkgndDied = Color(0.5, 0.2, 0.2, 0.4));
     ~Hud();
     
     void loadHud();
@@ -46,16 +49,21 @@ public:
     void decLivesLeft(int dec);
     void restoreHealth();
     void decHealth(int dec);
+    void showLevelEndedText(int code, int numLevel, int numTotalLevels = -1, bool nextLevelLocked = true);
+    void hideLevelEndedText();
     void handleEvent(Event *e);
 };
 
-class MainMenuItem {
+class MainMenuItem : public EventHandler {
 private:
     Core *core;
     Hud *hud;
     MainMenu *menu;
     Level *level;
+    Timer *tmrLevelEnded;
     string geometryFile;
+    bool levelEnded;
+    int levelEndedCode, levelEndedTextPeriod;
     
     void iniItem(string geomFile, string imageFile);
 public:
@@ -64,13 +72,14 @@ public:
     bool locked;
     static const int ITEM_EXIT;
     
-    MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, bool locked = false);
-    MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool locked = false);
+    MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, bool locked = false, int levelEndedTextPeriod = 5000);
+    MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool locked = false, int levelEndedTextPeriod = 5000);
     ~MainMenuItem();
     
-    void handleEvent(Event *e);
     void loadLevel();
     void exitLevel(int code);
+    void backToMainMenu();
+    void handleEvent(Event *e);
     bool Update();
 };
 
@@ -78,14 +87,14 @@ class MainMenu : public EventHandler {
 private:
     Core *core;
     Hud *hud;
+    Scene *scene;
+    SceneEntity *menu;
     Sound *sndRotate, *sndSelect, *sndSelectLocked;
     bool executingItem;
     int numLevels, selectedItem;
     Number angleRotLeft, incYaw, itemGap;
     Color colActive, colInactive, colSelected, colLocked, colSelectedLocked;
 public:
-    Scene *scene;
-    SceneEntity *menu;
     int numMenuItems;
     Number itemSize, itemBordW, menuRad;
     deque<MainMenuItem*> items;

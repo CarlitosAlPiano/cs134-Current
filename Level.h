@@ -47,10 +47,12 @@ private:
     void playerSubtractHealth(Number healthSub = 0.0, bool checkLastCollision = true);
     bool checkPlayerCollision(ScenePrimitive *obstacle);
     void computeRiverWidth();
+    void recomputePlayerVelocZ();
     void recomputePlayerVeloc();
     void keepPlayerHome();
     void keepPlayerWithinBB();
-    
+    void updatePlayerPos();
+
 public:
     static const int EXIT_DIED = 0;
     static const int EXIT_SURVIVED = 1;
