@@ -1,45 +1,92 @@
 <geometry>
     <scene>
         <sound enbl="1" />
-        <camera elev="20" rot="-100" />
+        <camera elev="20" rot="-90" />
         <fog enbl="1" dens="0.02" />
     </scene>
     <walls>
-        <vertex x="10" z="0" />
-        <vertex x="10" z="10" />
-        <vertex x="12" z="15" />
-        <vertex x="12" z="35" />
-        <vertex x="7" z="45" />
-        <vertex x="7" z="60" />
-        <vertex x="12" z="70" />
-        <vertex x="5" z="90" />
-        <vertex x="5" z="125" />
-        <vertex x="-5" z="125" goal="1" />
-        <vertex x="-5" z="90" />
-        <vertex x="-12" z="70" />
-        <vertex x="-7" z="60" />
-        <vertex x="-7" z="45" />
-        <vertex x="-12" z="35" />
-        <vertex x="-12" z="15" />
-        <vertex x="-10" z="10" />
-        <vertex x="-10" z="0" />
+        <vertex x="23" z="0" />
+        <vertex x="23" z="10" />
+        <vertex x="27" z="15" />
+        <vertex x="27" z="35" />
+        <vertex x="30" z="45" />
+        <vertex x="35" z="60" />
+        <vertex x="32" z="70" />
+        <vertex x="26" z="90" />
+        <vertex x="15" z="125" />
+        <vertex x="13" z="140" />
+        <vertex x="11" z="160" />
+        <vertex x="9" z="180" />
+        <vertex x="-9" z="180" goal="1" />
+
+  <vertex x="6" z="25" t="1" />
+        <vertex x="11" z="40" />
+        <vertex x="11" z="50" />
+        <vertex x="11" z="70" />
+        <vertex x="2" z="90" />
+        <vertex x="6" z="25" />
+
+	<vertex x="2" z="25" t="1" />
+        <vertex x="-10" z="40" />
+        <vertex x="-10" z="50" />
+        <vertex x="-10" z="70" />
+        <vertex x="-2" z="90" />
+        <vertex x="2" z="25" />
+
+        <vertex x="-20" z="0" t="1"/>
+        <vertex x="-20" z="10" />
+        <vertex x="-22" z="15" />
+        <vertex x="-22" z="35" />
+        <vertex x="-26" z="45" />
+        <vertex x="-24" z="60" />
+	<vertex x="-26" z="70" />
+        <vertex x="-20" z="90" />
+        <vertex x="-17" z="125" />
+        <vertex x="-14" z="140" />
+        <vertex x="-11" z="160" />
+	<vertex x="-9" z="180" />
     </walls>
+
     <obstacles>
-        <obstacle type="BOX" w="6" h="5" d="3" x="7" y="2.5" z="3" />
-        <obstacle type="CYLINDER" rad="3" h="5" x="-5" y="2.5" z="15" />
-        <obstacle type="CYLINDER" rad="2" h="10" x="10" y="5" z="25" />
-        <enemy type="BOX" w="3" h="10" d="5" x="0" y="5" z="35" amp="10" />
-        <enemy type="CYLINDER" rad="3" h="5" x="-1" y="2.5" z="42" amp="7" vel="2" offs="90" dirX="1" dirY="0" dirZ="1" />
-        <enemy type="BOX" w="2" h="7" d="4" x="0" y="6.5" z="100" amp="4" offs="180" />
-        <enemy type="CYLINDER" rad="2" h="7" x="0" y="3.5" z="115" amp="4" offs="0" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="20" y="5" z="42" />
+        <obstacle type="BOX" w="7" h="10" d="1" x="25" y="5" z="57" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="17" y="5" z="63" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="21" y="5" z="70" />
+
+        <obstacle type="BOX" w="43" h="3" d="1" x="3" y="8.5" z="95" />
+        <obstacle type="BOX" w="43" h="3" d="1" x="3" y="1.5" z="95" />
     </obstacles>
+
     <enemies>
+        <enemy type="BOX" w="5" h="10" d="1" x="4" y="5" z="27" amp="6" offs="90" />
+        <enemy type="SPHERE" rad="1" x="-15" y="1" z="40" amp="3" offs="90" />
+        <enemy type="SPHERE" rad="1" x="-15" y="8" z="40" amp="2.5" offs="270" />
+	<enemy type="SPHERE" rad="1" x="-15" y="5" z="52" amp="3" offs="180" />
+	<enemy type="SPHERE" rad="1" x="-15" y="5" z="52" amp="3" offs="0" />
+
+	<enemy type="SPHERE" rad="1" x="-15" y="8" z="65" amp="3" offs="270" />
+	<enemy type="SPHERE" rad="1" x="-15" y="1" z="65" amp="3" offs="90" />
+
+        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="140" amp="7" offs="180" />
+        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="145" amp="7" offs="0" />
+        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="150" amp="7" offs="180" />
+        <enemy type="BOX" w="5" h="10" d="1" x="4" y="5" z="160" amp="6" offs="90" />
+        <enemy type="BOX" w="5" h="10" d="1" x="-4" y="5" z="160" amp="6" offs="270" />
+        <enemy type="BOX" w="5" h="10" d="1" x="4" y="5" z="130" amp="7" offs="90" />
+        <enemy type="BOX" w="5" h="10" d="1" x="-4" y="5" z="130" amp="7" offs="270" />
     </enemies>
     <coins ptsSm="1" ptsLg="3" rotV="75">
-        <coin x="-1" y="9" z="15" lrg="1" />
-        <coin x="-5" y="8.9" z="15" />
-        <coin x="0" y="5" z="35" />
-        <coin x="11" y="1" z="70" />
-        <coin x="0" y="8.9" z="115" lrg="1" />
+        <coin x="4" y="1" z="27" />
+        <coin x="0" y="9" z="90" lrg="1" />
+
+        <coin x="-15" y="1" z="45" />
+        <coin x="-18" y="1" z="60" />
+        <coin x="-15" y="1" z="75" />
+
+        <coin x="25" y="1" z="43" />
+        <coin x="22" y="1" z="61" />
+        <coin x="22" y="1" z="83" />
+
+        <coin x="0" y="1" z="145" lrg="1" />
     </coins>
 </geometry>
