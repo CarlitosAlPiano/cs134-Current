@@ -53,8 +53,8 @@ public:
     static Number defBorder;
     static Color defColor, defBordColor;
     
-    Enemy(ScenePrimitive *enemy, Number ampH = 0, Number ampV = 10, Number velH = 1, Number velV = 1, Number offsH = PI/2, Number offsV = 0, Vector3 dirH = Vector3(1, 0, 0), bool loopH = true, bool halfV = true);
-    Enemy(ScenePrimitive *enemy, Vector3 middlePos, Number ampH = 0, Number ampV = 10, Number velH = 1, Number velV = 1, Number offsH = PI/2, Number offsV = 0, Vector3 dirH = Vector3(1, 0, 0), bool loopH = true, bool halfV = true);
+    Enemy(ScenePrimitive *enemy, Number ampH = 0, Number ampV = 10, Number velH = 10, Number velV = 10, Number offsH = PI/2, Number offsV = 0, Vector3 dirH = Vector3(1, 0, 0), bool loopH = true, bool halfV = true);
+    Enemy(ScenePrimitive *enemy, Vector3 middlePos, Number ampH = 0, Number ampV = 10, Number velH = 10, Number velV = 10, Number offsH = PI/2, Number offsV = 0, Vector3 dirH = Vector3(1, 0, 0), bool loopH = true, bool halfV = true);
     ~Enemy();
     
     void update(Number totalElapsed);
@@ -103,12 +103,20 @@ private:
     static Number getRadius2(xml_node<> *node, Number defValue = 0.0);
     static Number getBorder(xml_node<> *node, Number defValue = 0.0);
     static Number getAmplitude(xml_node<> *node, Number defValue = 0.0);
+    static Number getAmplitudeH(xml_node<> *node, Number defValue = 0.0);
+    static Number getAmplitudeV(xml_node<> *node, Number defValue = 0.0);
     static Number getVelocity(xml_node<> *node, Number defValue = 1.0);
+    static Number getVelocityH(xml_node<> *node, Number defValue = 1.0);
+    static Number getVelocityV(xml_node<> *node, Number defValue = 1.0);
     static Number getOffset(xml_node<> *node, Number defValue = 0.0);
+    static Number getOffsetH(xml_node<> *node, Number defValue = 0.0);
+    static Number getOffsetV(xml_node<> *node, Number defValue = 0.0);
     static bool isAttributeTrue(const char* attrName, xml_node<> *node, bool defValue = false);
     static bool hasLargeValue(xml_node<> *node);
     static bool isTransparent(xml_node<> *node);
     static bool isGoal(xml_node<> *node);
+    static bool isLoopH(xml_node<> *node);
+    static bool isHalfV(xml_node<> *node);
     static ScenePrimitive* iniPrimitive(int& shape, xml_node<> *node, bool boxReversed = false, Number numSegments = 30);
     static ScenePrimitive* iniShapeBorder(CollisionScene *scene, Number border, int shape, Vector3 pos, Color col, xml_node<> *node, bool boxReversed = false);
     static void drawWalls(CollisionScene *scene, xml_node<> *ndWalls);

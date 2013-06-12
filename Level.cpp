@@ -64,12 +64,12 @@ void Level::loadLevel(string& geometryFile) {
     if(SHOW_HOME_LINE) scene->addChild(lHome);
     DrawScene::drawScene(scene, player, walls, obstacles, enemies, coins, geometryFile.c_str());
     
-    ScenePrimitive *sp = new ScenePrimitive(ScenePrimitive::TYPE_BOX, 3, 5, 3);
+    /*ScenePrimitive *sp = new ScenePrimitive(ScenePrimitive::TYPE_BOX, 3, 5, 3);
     sp->setPosition(0, 0, 75);
     sp->setColor(Enemy::defColor);
     Enemy *enemy = new Enemy(sp, 10, 4, 10, 8, 0);
     enemies.push_back(enemy);
-    scene->addCollisionChild(sp);
+    scene->addCollisionChild(sp);*/
     
     computeRiverWidth();
     

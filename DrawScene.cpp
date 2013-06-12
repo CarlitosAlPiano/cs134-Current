@@ -258,12 +258,36 @@ Number DrawScene::getAmplitude(xml_node<> *node, Number defValue){
     return getNumber("amp", node, defValue);
 }
 
+Number DrawScene::getAmplitudeH(xml_node<> *node, Number defValue){
+    return getNumber("ampH", node, defValue);
+}
+
+Number DrawScene::getAmplitudeV(xml_node<> *node, Number defValue){
+    return getNumber("ampV", node, defValue);
+}
+
 Number DrawScene::getVelocity(xml_node<> *node, Number defValue){
     return getNumber("vel", node, defValue);
 }
 
+Number DrawScene::getVelocityH(xml_node<> *node, Number defValue){
+    return getNumber("velH", node, defValue);
+}
+
+Number DrawScene::getVelocityV(xml_node<> *node, Number defValue){
+    return getNumber("velV", node, defValue);
+}
+
 Number DrawScene::getOffset(xml_node<> *node, Number defValue){
     return getNumber("offs", node, defValue, false)*PI/180;
+}
+
+Number DrawScene::getOffsetH(xml_node<> *node, Number defValue){
+    return getNumber("offsH", node, defValue, false)*PI/180;
+}
+
+Number DrawScene::getOffsetV(xml_node<> *node, Number defValue){
+    return getNumber("offsV", node, defValue, false)*PI/180;
 }
 
 bool DrawScene::isAttributeTrue(const char* attrName, xml_node<> *node, bool defValue){
@@ -285,6 +309,14 @@ bool DrawScene::isTransparent(xml_node<> *node){
 
 bool DrawScene::isGoal(xml_node<> *node){
     return isAttributeTrue("goal", node);
+}
+
+bool DrawScene::isLoopH(xml_node<> *node){
+    return isAttributeTrue("loopH", node);
+}
+
+bool DrawScene::isHalfV(xml_node<> *node){
+    return isAttributeTrue("halfV", node);
 }
 
 ScenePrimitive* DrawScene::iniPrimitive(int& shape, xml_node<> *node,  bool boxReversed, Number numSegments){
@@ -426,7 +458,7 @@ void DrawScene::drawWalls(CollisionScene *scene, xml_node<> *ndWalls){
     ScenePrimitive *sp = new ScenePrimitive(ScenePrimitive::TYPE_PLANE, 5000, 5000);
     sp->setPositionY(-0.2);
     sp->setColor(1.0, 1.0, 0.5, 1.0);
-    scene->addChild(sp);
+    scene->addChild(sp);                        // Add an infinite plane as the floor
 }
 
 /*void DrawScene::drawObstacles(CollisionScene *scene, xml_node<> *ndObstacles){
@@ -519,7 +551,7 @@ void DrawScene::drawObstacles(CollisionScene *scene, xml_node<> *ndObstacles){
 }
 
 void DrawScene::drawEnemies(CollisionScene *scene, xml_node<> *ndEnemies){
-    /*if(!ndEnemies) ERROR("Incorrect format: One child of 'geometry' must be 'enemies'");
+    if(!ndEnemies) ERROR("Incorrect format: One child of 'geometry' must be 'enemies'");
     ScenePrimitive *scnPrimitive = NULL;
     Enemy *enemy = NULL;
     Vector3 pos, dir, lookAt;
@@ -542,16 +574,23 @@ void DrawScene::drawEnemies(CollisionScene *scene, xml_node<> *ndEnemies){
             getColor(color, node);                                  // Get its color
             getPosition(pos, node);                                 // Position
             getMovementDir(dir, node);                              // And direction of movement
+            dir.y = 0;
+            dir.Normalize();
             lookAt = Vector3(0, 0, 1).crossProduct(dir);
             if(lookAt.length() > 0) scnPrimitive = iniPrimitive(shape, node, true);
             scnPrimitive->setColor(color);                          // Apply those settings
             scnPrimitive->setPosition(pos);
             scnPrimitive->backfaceCulled = false;
             enemy = new Enemy(scnPrimitive);                        // Create a new enemy and configure its parameters
-            enemy->movementDir = dir;                               // Configure enemy's parameters
-            enemy->amplitude = getAmplitude(node);
-            enemy->velocity = getVelocity(node);
-            enemy->offset = getOffset(node);
+            enemy->dirH = dir;                                      // Configure enemy's parameters
+            enemy->ampH = getAmplitudeH(node, enemy->ampH);
+            enemy->ampV = getAmplitudeV(node, enemy->ampV);
+            enemy->velH = getVelocityH(node, enemy->velH);
+            enemy->velV = getVelocityV(node, enemy->velV);
+            enemy->offsH = getOffsetH(node, enemy->offsH);
+            enemy->offsV = getOffsetH(node, enemy->offsV);
+            enemy->loopH = isLoopH(node);
+            enemy->halfV = isHalfV(node);
             bordCol = Enemy::defBordColor;
             getColor(bordCol, node, "bord");
             border = getBorder(node, Enemy::defBorder);             // Read border setting or use enemyBorder by default
@@ -567,7 +606,7 @@ void DrawScene::drawEnemies(CollisionScene *scene, xml_node<> *ndEnemies){
             cout << "Incorrect format: the attribute 'type' of the tag 'enemy' must exist and be one of these: BOX, PLANE, SPHERE, CYLINDER, UNCAPPED_CYLINDER, CONE, TORUS. Enemy skipped.\n";
         }
         node = node->next_sibling();                                // Get the next enemy
-    } while(node);                                                  // Until there are no more enemies*/
+    } while(node);                                                  // Until there are no more enemies
 }
 
 void DrawScene::drawCoins(CollisionScene *scene, xml_node<> *ndCoins){
