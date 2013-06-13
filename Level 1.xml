@@ -43,13 +43,13 @@
         <obstacle type="CYLINDER" rad="2" h="7" x="0" y="6.5" z="140" amp="4" offs="180" />
     </obstacles>
     <enemies>
-        <enemy type="SPHERE" rad="1.5" x="0" y="-20" z="10" ampH="0" ampV="30" velH="5" velV="2" offsH="90" offsV="0" dirX="1" dirZ="0" loopH="1" halfV="0"  />
+        <enemy type="SPHERE" rad="1.5" x="-18" y="5" z="68" ampH="0" ampV="5" velH="5" velV="2" offsH="90" offsV="0" dirX="1" dirZ="0" loopH="1" halfV="0"  />
     </enemies>
     <coins ptsSm="1" ptsLg="3" rotV="75">
-        <coin x="0" y="2" z="35" lrg="1" />
-        <coin x="-18" y="10" z="68" />
-        <coin x="0" y="0" z="110" />
+        <coin x="0" y="1" z="35" lrg="1" />
+        <coin x="-18" y="9" z="68" />
+        <coin x="0" y="1" z="110" />
         <coin x="11" y="1" z="130" />
-        <coin x="0" y="8.9" z="150" lrg="1" />
+        <coin x="0" y="9" z="150" lrg="1" />
     </coins>
 </geometry>
