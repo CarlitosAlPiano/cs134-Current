@@ -1,6 +1,6 @@
 <geometry>
     <scene>
-        <sound enbl="0" />
+        <sound enbl="1" />
         <camera elev="30" rot="-100" />
         <fog enbl="1" dens="0.02" />
     </scene>
