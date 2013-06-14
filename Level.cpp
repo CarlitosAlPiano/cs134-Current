@@ -75,6 +75,7 @@ void Level::loadLevel(string& geometryFile) {
     camRad = DrawScene::iniCamRad;
 	camRot = DrawScene::iniCamRot;
 	camElev = DrawScene::iniCamElev;
+    paused = false;
 	mouse_clicked = false;
 	left_pressed = false;
 	right_pressed = false;
@@ -342,9 +343,11 @@ void Level::handleEvent(Event *e) {
                 switch (inputEvent->keyCode()) {
                     case KEY_LEFT:
                         left_pressed = true;
+                        if(paused) hud->showPrevInstructPage();
                         break;
                     case KEY_RIGHT:
                         right_pressed = true;
+                        if(paused) hud->showNextInstructPage();
                         break;
                     case KEY_UP:
                         up_pressed = true;
@@ -361,9 +364,14 @@ void Level::handleEvent(Event *e) {
                         if(!closer_locked) closer_pressed = true;
                         break;
                     case KEY_ESCAPE:
-                        core->paused = !core->paused;
+                        paused = !paused;
+                        if(paused){
+                            hud->showInstructions(2);
+                        }else{
+                            hud->hideInstructions();
+                        }
                         if(bgndMusic){
-                            if(core->paused){
+                            if(paused){
                                 bgndMusicOffset = bgndMusic->getOffset();
                                 bgndMusic->Stop();
                             }else{
@@ -415,7 +423,7 @@ void Level::handleEvent(Event *e) {
 }
 
 bool Level::Update() {
-    if(core->paused) return core->updateAndRender();
+    if(paused) return core->updateAndRender();
 	Number elapsed = core->getElapsed();
     totalElapsed += elapsed;
     

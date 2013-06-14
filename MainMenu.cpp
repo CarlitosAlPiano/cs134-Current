@@ -1,8 +1,8 @@
 #include "MainMenu.h"
 
-int Hud::points = 0, Hud::livesLeft = 3, Hud::pointsPerLife = 25;
+int Hud::points = 0, Hud::livesLeft = 3, Hud::pointsPerLife = 25, Hud::numPagesInstructions = 2;
 Number Hud::maxHealth = 100.0, Hud::health = maxHealth;
-const int MainMenuItem::ITEM_EXIT = 0;
+const int MainMenuItem::ITEM_EXIT = 0, MainMenuItem::ITEM_INSTRUCTIONS = -1;
 
 Hud::Hud(Core *core, Vector2 imgCoinSize, Vector2 imgHealthSize, Vector2 healthBarSize, Vector2 levelEndedBkgndSize, Vector2 margin, Number healthBarBorderW, Number levelEndedBkgndBorderW, Number blinkThresh, Number blinkPeriod, Color colLblLivesLeft, Color colLblPoints, Color colMaxHealth, Color colMinHealth, Color colBordMaxHealth, Color colBordMinHealth, Color colLevelEndedBkgndSurvived, Color colLevelEndedBkgndDied) : core(core), imgCoinSize(imgCoinSize), imgHealthSize(imgHealthSize), healthBarSize(healthBarSize), levelEndedBkgndSize(levelEndedBkgndSize), margin(margin), healthBarBorderW(healthBarBorderW), levelEndedBkgndBorderW(levelEndedBkgndBorderW), blinkThresh(blinkThresh), blinkPeriod(blinkPeriod), colLblLivesLeft(colLblLivesLeft), colLblPoints(colLblPoints), colMaxHealth(colMaxHealth), colMinHealth(colMinHealth), colBordMaxHealth(colBordMaxHealth), colBordMinHealth(colBordMinHealth), colLevelEndedBkgndSurvived(colLevelEndedBkgndSurvived), colLevelEndedBkgndDied(colLevelEndedBkgndDied), tmrBlink(NULL) {
     loadHud();
@@ -52,6 +52,12 @@ void Hud::loadHud(){
     levelEndedBkgndBorder->setPosition(levelEndedBkgnd->getPosition2D());
     levelEndedBkgndBorder->lineWidth = levelEndedBkgndBorderW;
     levelEndedBkgndBorder->renderWireframe = true;
+    imgInstructions = new ScreenImage(getInstructionsFileName(1));
+    imgInstructions->setPositionMode(ScreenEntity::POSITION_TOPLEFT);
+    imgInstructions->setPosition(0, 0);
+    imgInstructions->setShapeSize(core->getXRes(), core->getYRes());
+    imgInstructions->setColor(1.0, 1.0, 1.0, 0.75);
+    imgInstructions->visible = false;
     setPoints(points);
     restoreHealth();
     setLivesLeft(livesLeft);
@@ -66,12 +72,14 @@ void Hud::loadHud(){
     hud->addChild(lblLevelEndedL2);
     hud->addChild(levelEndedBkgnd);
     hud->addChild(levelEndedBkgndBorder);
+    hud->addChild(imgInstructions);
 }
 
 void Hud::unloadHud(){
     loaded = false;
     imgHealth->~ScreenImage();
     imgCoin->~ScreenImage();
+    imgInstructions->~ScreenImage();
     healthBar->~ScreenShape();
     healthBarBorder->~ScreenShape();
     lblLivesLeft->~ScreenLabel();
@@ -238,6 +246,31 @@ void Hud::hideLevelEndedText(){
     levelEndedBkgndBorder->visible = false;
 }
 
+void Hud::showInstructions(int page){
+    imgInstructions->visible = true;
+    imgInstructions->loadTexture(getInstructionsFileName(page));
+}
+
+void Hud::hideInstructions(){
+    imgInstructions->visible = false;
+}
+
+string Hud::getInstructionsFileName(int page){
+    stringstream ss;
+    
+    instructionsPage = min(numPagesInstructions, max(1, page));
+    ss << instructionsPage;
+    return "Instructions " + ss.str() + ".png";
+}
+
+void Hud::showPrevInstructPage(){
+    imgInstructions->loadTexture(getInstructionsFileName(instructionsPage-1));
+}
+
+void Hud::showNextInstructPage(){
+    imgInstructions->loadTexture(getInstructionsFileName(instructionsPage+1));
+}
+
 void Hud::handleEvent(Event *e){
     if(e->getDispatcher()==tmrBlink && e->getEventCode()==Timer::EVENT_TRIGGER){
         healthBar->visible = !healthBar->visible;
@@ -301,6 +334,9 @@ void MainMenuItem::iniItem(string geomFile, string imageFile){
 void MainMenuItem::loadLevel(){
     if(numLevel == ITEM_EXIT){
         exit(EXIT_SUCCESS);
+    }else if(numLevel == ITEM_INSTRUCTIONS){
+        menu->showInstructions();
+        levelEnded = true;
     }else{
         level = new Level(core, hud, this, geometryFile);
         levelEnded = false;
@@ -326,7 +362,7 @@ void MainMenuItem::exitLevel(int code){
 }
 
 Vector2 MainMenuItem::getStarImageSize(){
-    static ScreenImage *i = new ScreenImage("Stars_0.png");
+    static ScreenImage *i = new ScreenImage("Stars 0.png");
     static Number w = menu->itemSize*0.7, h=w*i->getImageHeight()/i->getImageWidth();
     
     return Vector2(w, h);
@@ -337,7 +373,7 @@ void MainMenuItem::setStars(int nStars){
     
     numStars = min(3, max(0, nStars));
     ss << numStars;
-    if(imgStars) imgStars->loadTexture("Stars_" + ss.str() + ".png");
+    if(imgStars) imgStars->loadTexture("Stars " + ss.str() + ".png");
 }
 
 void MainMenuItem::handleEvent(Event *e){
@@ -365,7 +401,7 @@ void MainMenuItem::handleEvent(Event *e){
 
 bool MainMenuItem::Update(){
     if(!levelEnded) return level->Update();
-    return core->Update();
+    return core->updateAndRender();
 }
 
 MainMenu::MainMenu(Core *core, Sound *sndRotate, Sound *sndSelect, Sound *sndSelectLocked, int numLevels, int numOthers, int selectedItem, Number incYaw, Number itemSize, Number itemBordW, Number itemGap, Color colActive, Color colInactive, Color colSelected, Color colLocked, Color colSelectedLocked, Scene *scn, SceneEntity *mn) : core(core), sndRotate(sndRotate), sndSelect(sndSelect), sndSelectLocked(sndSelectLocked), executingItem(false), numLevels(numLevels), selectedItem(selectedItem), angleRotLeft(0), incYaw(incYaw), itemSize(itemSize), itemBordW(itemBordW), itemGap(max(itemGap,0.5)), colActive(colActive), colInactive(colInactive), colSelected(colSelected), colLocked(colLocked), colSelectedLocked(colSelectedLocked), scene(scn), menu(mn), hud(NULL) {
@@ -376,6 +412,7 @@ MainMenu::MainMenu(Core *core, Sound *sndRotate, Sound *sndSelect, Sound *sndSel
     for(unsigned int i=1; i<=numLevels; i++){
         items.push_back(new MainMenuItem(core, hud, this, i, true, i<1)); // All levels locked except for level 1
     }
+    items.push_back(new MainMenuItem(core, hud, this, MainMenuItem::ITEM_INSTRUCTIONS, "", "Instructions.png", false, false));
     items.push_back(new MainMenuItem(core, hud, this, MainMenuItem::ITEM_EXIT, "", "Exit.png", false, false));
     
     loadMenu();
@@ -395,6 +432,7 @@ MainMenu::~MainMenu(){
 
 void MainMenu::loadMenu(){
     executingItem = false;
+    showingInstructions = false;
     if(!scene) scene = new Scene();
     if(!menu) menu = new SceneEntity();
     
@@ -482,6 +520,12 @@ void MainMenu::rotateTo(int target){
     }
 }
 
+void MainMenu::showInstructions(){
+    loadMenu();
+    showingInstructions = true;
+    hud->showInstructions(1);
+}
+
 void MainMenu::handleEvent(Event *e){
     if(executingItem) return;
     InputEvent *inputEvent = (InputEvent*)e;
@@ -502,10 +546,18 @@ void MainMenu::handleEvent(Event *e){
             case InputEvent::EVENT_KEYUP:
                 switch (inputEvent->keyCode()) {
                     case KEY_LEFT:
-                        rotateMenu(true);
+                        if(showingInstructions){
+                            hud->showPrevInstructPage();
+                        }else{
+                            rotateMenu(true);
+                        }
                         break;
                     case KEY_RIGHT:
-                        rotateMenu(false);
+                        if(showingInstructions){
+                            hud->showNextInstructPage();
+                        }else{
+                            rotateMenu(false);
+                        }
                         break;
                     case KEY_RETURN:
                         if(!items.at(selectedItem)->locked){
@@ -515,7 +567,13 @@ void MainMenu::handleEvent(Event *e){
                         }
                         break;
                     case KEY_ESCAPE:
-                        rotateTo(numMenuItems-1);
+                        if(showingInstructions){
+                            showingInstructions = false;
+                            hud->hideInstructions();
+                            loadMenu();
+                        }else{
+                            rotateTo(numMenuItems-1);
+                        }
                         break;
                 }
                 recolorBorders();
@@ -526,6 +584,7 @@ void MainMenu::handleEvent(Event *e){
 
 bool MainMenu::Update(){
     if(executingItem) return items.at(selectedItem)->Update();
+    if(showingInstructions) return core->updateAndRender();
 
     if(angleRotLeft >= incYaw){
         menu->setYaw(menu->getYaw()+incYaw);
