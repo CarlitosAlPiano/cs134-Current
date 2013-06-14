@@ -23,116 +23,59 @@
     <obstacles>
         <obstacle type="BOX" w="4" h="4.5" d="1" x="0" y="8" z="495" />
         <obstacle type="BOX" w="4" h="4.5" d="1" x="0" y="2" z="495" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="0" y="5" z="50" ampV="6" offsV="90" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="0" y="5" z="75" ampV="6" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="0" y="5" z="100" ampV="6" offsV="90" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="0" y="5" z="125" ampV="6" offsV="270" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="0" y="5" z="150" ampV="6" offsV="90" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="0" y="5" z="175" ampV="6" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="0" y="5" z="200" ampV="6" offsV="90" />
+
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="250" ampV="4" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="262" ampV="4" offsV="90" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="275" ampV="4" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="287" ampV="4" offsV="270" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="300" ampV="4" offsV="90" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="312" ampV="4" offsV="270" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="350" ampV="4" offsV="90" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="375" ampV="4" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="400" ampV="4" offsV="90" />
     </obstacles>
     <enemies>
-        <enemy type="BOX" w="5" h="10" d="1" x="0" y="5" z="50" amp="6" offs="90" />
-        <enemy type="BOX" w="5" h="10" d="1" x="0" y="5" z="75" amp="6" />
-        <enemy type="BOX" w="5" h="10" d="1" x="0" y="5" z="100" amp="6" offs="90" />
-        <enemy type="BOX" w="5" h="10" d="1" x="0" y="5" z="125" amp="6" offs="270" />
-        <enemy type="BOX" w="5" h="10" d="1" x="0" y="5" z="150" amp="6" offs="90" />
-        <enemy type="BOX" w="5" h="10" d="1" x="0" y="5" z="175" amp="6" />
-        <enemy type="BOX" w="5" h="10" d="1" x="0" y="5" z="200" amp="6" offs="90" />
-
-        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="250" amp="4" />
-        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="262" amp="4" offs="90" />
-        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="275" amp="4" />
-        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="287" amp="4" offs="270" />
-        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="300" amp="4" offs="90" />
-        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="312" amp="4" offs="270" />
-        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="350" amp="4" offs="90" />
-        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="375" amp="4" />
-        <enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="400" amp="4" offs="90" />
+     	<enemy type="CYLINDER" rad="2" h="10" x="0" y="5" z="-250" ampV="4" />
     </enemies>
     <coins ptsSm="1" ptsLg="3" rotV="75">
 
         <coin x="0" y="1" z="15" />
-        <coin x="0" y="1" z="18" />
-        <coin x="0" y="1" z="21" />
         <coin x="0.8" y="1.4" z="24" />
-        <coin x="1.5" y="1.8" z="27" />
-        <coin x="2.3" y="2.2" z="30" />
         <coin x="3.0" y="2.6" z="33" />
-        <coin x="4.0" y="3.0" z="36" />
-        <coin x="5.0" y="3.4" z="39" />
         <coin x="6.0" y="3.8" z="42" />
-        <coin x="6.0" y="4.2" z="45" />
-        <coin x="6.0" y="4.6" z="48" />
         <coin x="6.0" y="5.0" z="51" />
-        <coin x="6" y="5.4" z="54" />
-        <coin x="6" y="5.8" z="57" />
         <coin x="6" y="6.2" z="60" />
-        <coin x="6" y="6.6" z="63" />
-        <coin x="6" y="7.0" z="66" />
         <coin x="6" y="7.4" z="69" />
-        <coin x="6" y="7.8" z="72" />
-        <coin x="6" y="8.2" z="75" />
-        <coin x="5" y="8.6" z="78" />
-        <coin x="4" y="9.0" z="81" />
-        <coin x="3" y="9.0" z="84" />
         <coin x="2" y="9.0" z="87" />
-        <coin x="1" y="8.5" z="90" />
-        <coin x="0" y="8.0" z="93" />
         <coin x="-1" y="7.5" z="96" />
-        <coin x="-2" y="7.0" z="99" />
-        <coin x="-2.3" y="6.5" z="102" />
         <coin x="-2.3" y="6.0" z="105" />
-        <coin x="-2.3" y="5.5" z="108" />
-        <coin x="-2.3" y="5.0" z="111" />
         <coin x="-2.3" y="4.5" z="114" />
-        <coin x="-2.3" y="4.0" z="117" />
-        <coin x="-2.3" y="3.5" z="120" />
         <coin x="-2.3" y="3.0" z="123" />
-        <coin x="-2.3" y="2.5" z="126" />
-        <coin x="-2.3" y="1.0" z="129" />
         <coin x="-2" y="1" z="132" />
-        <coin x="-1.7" y="1" z="135" />
-        <coin x="-1.2" y="1" z="138" />
         <coin x="-0.8" y="1" z="141" />
-        <coin x="-0.3" y="1" z="144" />
-        <coin x="-0" y="1" z="147" />
         <coin x="0.3" y="1" z="150" />
-        <coin x="0.8" y="1" z="153" />
-        <coin x="1.3" y="1" z="156" />
         <coin x="2" y="1" z="159" />
-  <coin x="2" y="2" z="162" />
-	<coin x="2" y="3" z="165" />
 	<coin x="2" y="4" z="168" />
-	<coin x="2" y="5" z="171" />
-	<coin x="2" y="6" z="174" />
 	<coin x="2" y="6" z="177" />
-	<coin x="2" y="5" z="180" />
-	<coin x="2" y="4" z="183" />
 	<coin x="2" y="3" z="186" />
-	<coin x="1" y="2" z="189" />
-	<coin x="0" y="1" z="192" />
 	<coin x="-1" y="1" z="195" />
-	<coin x="-2" y="1" z="198" />
-	<coin x="-3" y="1" z="201" />
 	<coin x="-3" y="1" z="204" />
-	<coin x="-3" y="1" z="207" />
-	<coin x="-2" y="1" z="210" />
 	<coin x="-1" y="1" z="213" />
-	<coin x="0" y="1" z="216" />
-	<coin x="0" y="2" z="219" />
 	<coin x="0" y="3" z="222" />
-	<coin x="0" y="4" z="225" />
-	<coin x="0" y="5" z="228" />
 	<coin x="0" y="6" z="231" />
 
 	<coin x="0" y="5" z="430" />
-	<coin x="0" y="5" z="435" />
 	<coin x="0" y="5" z="440" />
-	<coin x="0" y="5" z="445" />
 	<coin x="0" y="5" z="450" />
-	<coin x="0" y="5" z="455" />
 	<coin x="0" y="5" z="460" />
-	<coin x="0" y="5" z="465" />
 	<coin x="0" y="5" z="470" />
-	<coin x="0" y="5" z="475" />
-	<coin x="0" y="5" z="485" />
 	<coin x="0" y="5" z="490" />
-	<coin x="0" y="5" z="495" />
-
-
     </coins>
 </geometry>
