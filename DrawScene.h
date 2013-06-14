@@ -127,7 +127,7 @@ private:
     static void setupScene(CollisionScene *scene, xml_node<> *ndScene);
 public:
     static bool backgndMusicEn;
-    static Number iniCamRad, iniCamRot, iniCamElev;
+    static Number iniCamRad, iniCamRot, iniCamElev, speedFactor;
 
     static void drawScene(CollisionScene *scene, ScenePrimitive*& plyr, deque<Wall*>& wlls, deque<Obstacle*>& obstcls, deque<Enemy*>& enemies, deque<Coin*>& coins, const char *strFile);
 };

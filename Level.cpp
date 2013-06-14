@@ -2,8 +2,7 @@
 
 #define VEL_PLAYER_INC  0.15
 #define VEL_RET_HOME    0.1
-#define SPEED_FACTOR    40
-#define CAM_VEL_Z       (SPEED_FACTOR/(riverWidth*Wall::height))
+#define CAM_VEL_Z       (DrawScene::speedFactor/(riverWidth*Wall::height))
 #define CAM_INC_RAD     2
 #define CAM_INC_ROT     0.03
 #define CAM_INC_ELEV    0.03

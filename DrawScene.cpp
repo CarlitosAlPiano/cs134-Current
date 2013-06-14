@@ -7,6 +7,7 @@
 #define DEF_CAM_ELEV    20*PI/180
 #define CAM_MIN_RADIUS  20
 #define CAM_MAX_ELEV    (PI/2 - 0.01)
+#define DEF_SPEED_FACT  40
 #define DEF_FOG_DENS    0.02
 #define DEF_FOG_COLOR   Color(0.0, 0.0, 0.2, 1.0)
 #define DEF_OBST_BORDER 1
@@ -42,7 +43,7 @@ deque<Coin*>* DrawScene::coins = NULL;
 ScenePrimitive* DrawScene::player = NULL;
 
 bool DrawScene::backgndMusicEn = DEF_MUSIC_EN;
-Number DrawScene::iniCamRad = DEF_CAM_RADIUS, DrawScene::iniCamElev = DEF_CAM_ELEV, DrawScene::iniCamRot = DEF_CAM_ROT;
+Number DrawScene::iniCamRad = DEF_CAM_RADIUS, DrawScene::iniCamElev = DEF_CAM_ELEV, DrawScene::iniCamRot = DEF_CAM_ROT, DrawScene::speedFactor = DEF_SPEED_FACT;
 Number Wall::defBorder = DEF_WALL_BORDER, Obstacle::defBorder = DEF_OBST_BORDER, Enemy::defBorder = DEF_ENMY_BORDER;
 Color Wall::defColor = DEF_WALL_COLOR, Wall::defBordColor = DEF_WL_BORD_COL;
 Color Obstacle::defColor = DEF_OBST_COLOR, Obstacle::defBordColor = DEF_OBS_BRD_COL;
@@ -672,6 +673,11 @@ void DrawScene::setupScene(CollisionScene *scene, xml_node<> *ndScene){
         scene->setFogProperties(Renderer::FOG_EXP2, DEF_FOG_COLOR, getNumber("dens", node, DEF_FOG_DENS), -1000, 3000);
     }else{
         scene->enableFog(false);                                                // Foggy effect disabled
+    }
+    
+    node = ndScene->first_node("speed", 0, false);                              // Get the tag 'speed'
+    if(node){
+        speedFactor = getNumber("factor", node, speedFactor);                   // Configure speed factor (constant that multiplies the river cross-section area)
     }
 }
 

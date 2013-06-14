@@ -244,25 +244,27 @@ void Hud::handleEvent(Event *e){
     }
 }
 
-MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, bool locked, int levelEndedTextPeriod) : core(core), hud(hud), menu(menu), numLevel(numLevel), locked(locked), levelEndedTextPeriod(levelEndedTextPeriod), level(NULL), image(NULL), imageBorder(NULL) {
+MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, bool isLevel, bool locked, int levelEndedTextPeriod) : core(core), hud(hud), menu(menu), numLevel(numLevel), isLevel(isLevel), locked(locked), levelEndedTextPeriod(levelEndedTextPeriod), level(NULL), image(NULL), imageBorder(NULL) {
     stringstream ss;
     ss << numLevel;
     
     iniItem("Level " + ss.str() + ".xml", "Level " + ss.str() + ".png");
 }
 
-MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool locked, int levelEndedTextPeriod) : core(core), menu(menu), numLevel(numLevel), locked(locked), levelEndedTextPeriod(levelEndedTextPeriod), level(NULL), image(NULL), imageBorder(NULL) {
+MainMenuItem::MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool isLevel, bool locked, int levelEndedTextPeriod) : core(core), menu(menu), numLevel(numLevel), isLevel(isLevel), locked(locked), levelEndedTextPeriod(levelEndedTextPeriod), level(NULL), image(NULL), imageBorder(NULL) {
     iniItem(geometryFile, imageFile);
 }
 
 MainMenuItem::~MainMenuItem(){
     image->~ScenePrimitive();
-    imageBorder->~ScenePrimitive();
+    if(imageBorder) imageBorder->~ScenePrimitive();
+    if(imgStars) imgStars->~ScenePrimitive();
     if(level) level->~Level();
 }
 
 void MainMenuItem::iniItem(string geomFile, string imageFile){
     Number th = (numLevel-1)*2*PI/menu->numMenuItems;
+    Vector2 imgStarsSize = getStarImageSize();
     
     levelEnded = false;
     geometryFile = geomFile;
@@ -273,6 +275,16 @@ void MainMenuItem::iniItem(string geomFile, string imageFile){
     image->setYaw(th*180/PI);
     image->loadTexture(imageFile);
     image->backfaceCulled = false;
+    if(isLevel){
+        imgStars = new ScenePrimitive(ScenePrimitive::TYPE_PLANE, imgStarsSize.x, imgStarsSize.y);
+        imgStars->setPosition(Vector3(-(menu->menuRad+0.5)*sin(th), (0.9*menu->itemSize-imgStarsSize.y)/2, -(menu->menuRad+0.5)*cos(th)));
+        imgStars->setRoll(180);
+        imgStars->setPitch(-90);
+        imgStars->setYaw(th*180/PI);
+        setStars(0);
+    }else{
+        imgStars = NULL;
+    }
     if(menu->itemBordW > 0){
         imageBorder = new ScenePrimitive(ScenePrimitive::TYPE_PLANE, menu->itemSize, menu->itemSize);
         imageBorder->setPosition(image->getPosition());
@@ -299,9 +311,33 @@ void MainMenuItem::exitLevel(int code){
     levelEnded = true;
     levelEndedCode = code;
 
+    if(code == Level::EXIT_SURVIVED){
+        if(hud->getHealth() >= 0.9*hud->maxHealth){
+            setStars(3);
+        }else if(hud->getHealth() >= 0.5*hud->maxHealth){
+            setStars(max(2, numStars));
+        }else{
+            setStars(max(1, numStars));
+        }
+    }
     hud->showLevelEndedText(code, numLevel, menu->numMenuItems, menu->items.at(numLevel)->locked);
     tmrLevelEnded = new Timer(true, levelEndedTextPeriod);
     tmrLevelEnded->addEventListener(this, Timer::EVENT_TRIGGER);
+}
+
+Vector2 MainMenuItem::getStarImageSize(){
+    static ScreenImage *i = new ScreenImage("Stars_0.png");
+    static Number w = menu->itemSize*0.7, h=w*i->getImageHeight()/i->getImageWidth();
+    
+    return Vector2(w, h);
+}
+
+void MainMenuItem::setStars(int nStars){
+    stringstream ss;
+    
+    numStars = min(3, max(0, nStars));
+    ss << numStars;
+    if(imgStars) imgStars->loadTexture("Stars_" + ss.str() + ".png");
 }
 
 void MainMenuItem::handleEvent(Event *e){
@@ -338,9 +374,9 @@ MainMenu::MainMenu(Core *core, Sound *sndRotate, Sound *sndSelect, Sound *sndSel
     hud = new Hud(core);
     
     for(unsigned int i=1; i<=numLevels; i++){
-        items.push_back(new MainMenuItem(core, hud, this, i, i!=1)); // All levels locked except for level 1
+        items.push_back(new MainMenuItem(core, hud, this, i, true, i>1)); // All levels locked except for level 1
     }
-    items.push_back(new MainMenuItem(core, hud, this, MainMenuItem::ITEM_EXIT, "", "Exit.png"));
+    items.push_back(new MainMenuItem(core, hud, this, MainMenuItem::ITEM_EXIT, "", "Exit.png", false, false));
     
     loadMenu();
     core->getInput()->addEventListener(this, InputEvent::EVENT_KEYDOWN);
@@ -364,7 +400,8 @@ void MainMenu::loadMenu(){
     
     for(size_t i=0; i<items.size(); i++){
         menu->addChild(items.at(i)->image);
-        menu->addChild(items.at(i)->imageBorder);
+        if(items.at(i)->imageBorder) menu->addChild(items.at(i)->imageBorder);
+        if(items.at(i)->imgStars) menu->addChild(items.at(i)->imgStars);
     }
     menu->setPosition(0, 0, menuRad);
     menu->setYaw(-selectedItem*360.0/numMenuItems);

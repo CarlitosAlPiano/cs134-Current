@@ -30,7 +30,7 @@ public:
     static int pointsPerLife;
     static Number maxHealth;
     
-    Hud(Core *core, Vector2 imgCoinSize = Vector2(20, 20), Vector2 imgHealthSize = Vector2(20, 20), Vector2 healthBarSize = Vector2(150, 25), Vector2 levelEndedBkgndSize = Vector2(550,350), Vector2 margin = Vector2(7, 2), Number healthBarBorderW = 2, Number levelEndedBkgndBorderW = 2, Number blinkThresh = 0.2, Number blinkPeriod = 250, Color colLblLivesLeft = Color(0.2, 0.8, 0.2, 1.0), Color colLblPoints = Color(0.9, 0.7, 0.2, 1.0), Color colMaxHealth = Color(0.0, 1.0, 0.0, 1.0), Color colMinHealth = Color(1.0, 0.0, 0.0, 1.0), Color colBordMaxHealth = Color(0.0, 0.4, 0.0, 1.0), Color colBordMinHealth = Color(0.4, 0.0, 0.0, 1.0), Color colLevelEndedBkgndSurvived = Color(0.2, 0.8, 0.2, 0.4), Color colLevelEndedBkgndDied = Color(0.5, 0.2, 0.2, 0.4));
+    Hud(Core *core, Vector2 imgCoinSize = Vector2(20, 20), Vector2 imgHealthSize = Vector2(20, 20), Vector2 healthBarSize = Vector2(150, 25), Vector2 levelEndedBkgndSize = Vector2(550,350), Vector2 margin = Vector2(7, 2), Number healthBarBorderW = 2, Number levelEndedBkgndBorderW = 2, Number blinkThresh = 0.5, Number blinkPeriod = 250, Color colLblLivesLeft = Color(0.2, 0.8, 0.2, 1.0), Color colLblPoints = Color(0.9, 0.7, 0.2, 1.0), Color colMaxHealth = Color(0.0, 1.0, 0.0, 1.0), Color colMinHealth = Color(1.0, 0.0, 0.0, 1.0), Color colBordMaxHealth = Color(0.0, 0.4, 0.0, 1.0), Color colBordMinHealth = Color(0.4, 0.0, 0.0, 1.0), Color colLevelEndedBkgndSurvived = Color(0.2, 0.8, 0.2, 0.4), Color colLevelEndedBkgndDied = Color(0.5, 0.2, 0.2, 0.4));
     ~Hud();
     
     void loadHud();
@@ -66,19 +66,21 @@ private:
     int levelEndedCode, levelEndedTextPeriod;
     
     void iniItem(string geomFile, string imageFile);
+    Vector2 getStarImageSize();
 public:
-    ScenePrimitive *image, *imageBorder;
-    int numLevel;
-    bool locked;
+    ScenePrimitive *image, *imageBorder, *imgStars;
+    int numLevel, numStars;
+    bool isLevel, locked;
     static const int ITEM_EXIT;
     
-    MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, bool locked = false, int levelEndedTextPeriod = 5000);
-    MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool locked = false, int levelEndedTextPeriod = 5000);
+    MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, bool isLevel = true, bool locked = false, int levelEndedTextPeriod = 4000);
+    MainMenuItem(Core *core, Hud *hud, MainMenu* menu, int numLevel, string geometryFile, string imageFile, bool isLevel = true, bool locked = false, int levelEndedTextPeriod = 4000);
     ~MainMenuItem();
     
     void loadLevel();
     void exitLevel(int code);
     void backToMainMenu();
+    void setStars(int nStars);
     void handleEvent(Event *e);
     bool Update();
 };
