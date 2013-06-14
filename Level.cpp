@@ -93,8 +93,6 @@ void Level::loadLevel(string& geometryFile) {
     playerVeloc = Vector3(0, 0, CAM_VEL_Z);
     playerRad = player->getMesh()->getRadius();
     currentZ = player->getPosition().z;
-    totalElapsed = 0;
-    lastCollision = 0;
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEMOVE);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEDOWN);
 	core->getInput()->addEventListener(this, InputEvent::EVENT_MOUSEUP);
@@ -109,6 +107,8 @@ void Level::loadLevel(string& geometryFile) {
     }else{
         bgndMusic = NULL;
     }
+    totalElapsed = 0;
+    lastCollision = 0;
 }
 
 void Level::startTimers(){

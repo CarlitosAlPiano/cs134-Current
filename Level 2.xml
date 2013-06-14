@@ -56,26 +56,26 @@
         <obstacle type="BOX" w="43" h="3" d="1" x="3" y="8.5" z="95" />
         <obstacle type="BOX" w="43" h="3" d="1" x="3" y="1.5" z="95" />
         
-        <obstacle type="BOX" w="5" h="10" d="1" x="4" y="5" z="27" ampH="6" offsH="90" />
-        <obstacle type="SPHERE" rad="1" x="-15" y="1" z="40" ampH="3" offsH="90" />
-        <obstacle type="SPHERE" rad="1" x="-15" y="8" z="40" ampH="2.5" offsH="270" />
-	<obstacle type="SPHERE" rad="1" x="-15" y="5" z="52" ampH="3" offsH="180" />
-	<obstacle type="SPHERE" rad="1" x="-15" y="5" z="52" ampH="3" offsH="0" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="4" y="5" z="27" amp="6" offs="90" />
+        <obstacle type="SPHERE" rad="1" x="-15" y="1" z="40" amp="3" offs="90" />
+        <obstacle type="SPHERE" rad="1" x="-15" y="8" z="40" amp="2.5" offs="270" />
+        <obstacle type="SPHERE" rad="1" x="-15" y="5" z="52" amp="3" offs="180" />
+        <obstacle type="SPHERE" rad="1" x="-15" y="5" z="52" amp="3" offs="0" />
 
-	<obstacle type="SPHERE" rad="1" x="-15" y="8" z="65" ampH="3" offsH="270" />
-	<obstacle type="SPHERE" rad="1" x="-15" y="1" z="65" ampH="3" offsH="90" />
+        <obstacle type="SPHERE" rad="1" x="-15" y="8" z="65" amp="3" offs="270" />
+        <obstacle type="SPHERE" rad="1" x="-15" y="1" z="65" amp="3" offs="90" />
 
-        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="140" ampH="7" offsH="180" />
-        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="145" ampH="7" offsH="0" />
-        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="150" ampH="7" offsH="180" />
-        <obstacle type="BOX" w="5" h="10" d="1" x="4" y="5" z="160" ampH="6" offsH="90" />
-        <obstacle type="BOX" w="5" h="10" d="1" x="-4" y="5" z="160" ampH="6" offsH="270" />
-        <obstacle type="BOX" w="5" h="10" d="1" x="4" y="5" z="130" ampH="7" offsH="90" />
-        <obstacle type="BOX" w="5" h="10" d="1" x="-4" y="5" z="130" ampH="7" offsH="270" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="140" amp="7" offs="180" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="145" amp="7" offs="0" />
+        <obstacle type="CYLINDER" rad="2" h="10" x="0" y="5" z="150" amp="7" offs="180" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="4" y="5" z="160" amp="6" offs="90" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="-4" y="5" z="160" amp="6" offs="270" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="4" y="5" z="130" amp="7" offs="90" />
+        <obstacle type="BOX" w="5" h="10" d="1" x="-4" y="5" z="130" amp="7" offs="270" />
     </obstacles>
 
     <enemies>
-        <enemy type="BOX" w="5" h="10" d="-50" x="4" y="5" z="27" ampH="6" offs="90" />
+        <enemy type="BOX" w="5" h="10" d="-50" x="4" y="5" z="-100" ampH="6" offs="90" />
     </enemies>
     <coins ptsSm="1" ptsLg="3" rotV="75">
         <coin x="4" y="1" z="27" />

@@ -3,6 +3,7 @@
         <sound enbl="1" />
         <camera elev="20" rot="-90" />
         <fog enbl="1" dens="0.02" />
+        <speed factor="60" />
     </scene>
     <walls>
         <vertex x="20" z="0" />

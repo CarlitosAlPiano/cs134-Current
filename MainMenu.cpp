@@ -374,7 +374,7 @@ MainMenu::MainMenu(Core *core, Sound *sndRotate, Sound *sndSelect, Sound *sndSel
     hud = new Hud(core);
     
     for(unsigned int i=1; i<=numLevels; i++){
-        items.push_back(new MainMenuItem(core, hud, this, i, true, i>1)); // All levels locked except for level 1
+        items.push_back(new MainMenuItem(core, hud, this, i, true, i<1)); // All levels locked except for level 1
     }
     items.push_back(new MainMenuItem(core, hud, this, MainMenuItem::ITEM_EXIT, "", "Exit.png", false, false));
     
